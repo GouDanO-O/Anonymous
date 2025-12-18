@@ -1,0 +1,114 @@
+{
+    "name": "GameInput",
+    "maps": [
+        {
+            "name": "PlayerMouseMap",
+            "id": "40dc0607-85bd-470a-b083-217da9ad6624",
+            "actions": [
+                {
+                    "name": "MouseDrag",
+                    "type": "PassThrough",
+                    "id": "22c2af73-0fe9-48c8-93df-092e83f7d1cb",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "MouseLeftClick",
+                    "type": "Button",
+                    "id": "197bcc1b-8a71-4dc1-8c33-102e810e1acf",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MouseRightClick",
+                    "type": "Button",
+                    "id": "cf3a2abe-e65f-4eae-be2e-2e0fd49e76cb",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MouseMiddleClick",
+                    "type": "Button",
+                    "id": "595d19d0-e3d0-4092-80f7-fd19f8ad1bcc",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Press",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MouseMiddleScroll",
+                    "type": "Value",
+                    "id": "4be1485e-fc8a-4d1c-ae58-363a18251b76",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "52a2f75c-ced5-4330-90db-d4f6b61bcdfe",
+                    "path": "<Mouse>/position",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MouseDrag",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "181c48cf-deaf-4179-98f6-57be2dba561d",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MouseLeftClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "dc24b093-c410-48fc-8395-a26c725265e8",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MouseRightClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1f2d01a0-2fba-4f5e-9e38-0c57d4951ba0",
+                    "path": "<Mouse>/middleButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MouseMiddleClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e87e6c6c-4e9d-48fc-b4a9-d0251cf13395",
+                    "path": "<Mouse>/scroll",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MouseMiddleScroll",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}

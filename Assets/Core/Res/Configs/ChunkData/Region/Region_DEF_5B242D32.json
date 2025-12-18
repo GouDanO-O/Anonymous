@@ -1,0 +1,16 @@
+{
+  "InitialSpawnedPosition": {
+    "x": 0.0,
+    "y": 0.0
+  },
+  "InitialPlayerLocateDungeonId": "Dungeon_DEF_3E4C63EC",
+  "InitialShowingDungeonIdList": [
+    "Dungeon_DEF_3E4C63EC"
+  ],
+  "DungeonIdList": [
+    "Dungeon_DEF_3E4C63EC"
+  ],
+  "DefId": "Region_DEF_5B242D32",
+  "DefName": "新区域",
+  "DefDescription": "这是一个新的区域"
+}
