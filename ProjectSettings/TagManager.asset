@@ -38,14 +38,35 @@ TagManager:
   - 
   - 
   m_SortingLayers:
-  - name: Default
-    uniqueID: 0
-    locked: 0
   - name: Game
     uniqueID: 2319180753
     locked: 0
-  - name: WorldRoot
-    uniqueID: 2539223109
+  - name: Ground
+    uniqueID: 2738704545
+    locked: 0
+  - name: Floor
+    uniqueID: 2599349037
+    locked: 0
+  - name: FloorDecor
+    uniqueID: 1980813169
+    locked: 0
+  - name: Wall
+    uniqueID: 2340891127
+    locked: 0
+  - name: WallDecor
+    uniqueID: 27166557
+    locked: 0
+  - name: Entity
+    uniqueID: 1471861845
+    locked: 0
+  - name: Roof
+    uniqueID: 2988552591
+    locked: 0
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: UI
+    uniqueID: 231801751
     locked: 0
   m_RenderingLayers:
   - Default

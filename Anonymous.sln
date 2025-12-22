@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniTask.DOTween", "UniTask.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniTask.TextMeshPro", "UniTask.TextMeshPro.csproj", "{d6f4a248-3145-9a9e-307f-f4402b9ded16}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sirenix.OdinInspector.Modules.UnityMathematics", "Sirenix.OdinInspector.Modules.UnityMathematics.csproj", "{114fe34a-41ba-961e-f0b2-4c88e2f423e4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniTask.Editor", "UniTask.Editor.csproj", "{fba87356-1c82-4ae7-3744-421dedb97723}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniTask.Addressables", "UniTask.Addressables.csproj", "{bd5b3411-c70b-0190-7280-1eb7ea56c907}"
@@ -48,6 +50,8 @@ Global
 		{832dfa77-c388-8ead-cc98-6dcafc7906e3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{d6f4a248-3145-9a9e-307f-f4402b9ded16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{d6f4a248-3145-9a9e-307f-f4402b9ded16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{114fe34a-41ba-961e-f0b2-4c88e2f423e4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{114fe34a-41ba-961e-f0b2-4c88e2f423e4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{fba87356-1c82-4ae7-3744-421dedb97723}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{fba87356-1c82-4ae7-3744-421dedb97723}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{bd5b3411-c70b-0190-7280-1eb7ea56c907}.Debug|Any CPU.ActiveCfg = Debug|Any CPU

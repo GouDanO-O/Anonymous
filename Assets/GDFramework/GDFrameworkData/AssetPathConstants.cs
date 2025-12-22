@@ -13,6 +13,11 @@ namespace GDFramework.FrameData
            public struct ChunkDataAssetGroup
            {
                public const string BundleName = "defaultpackage_core_res_configs_chunkdata";
+               public const string Dungeon_DEF_3E4C63EC = "yoo:Dungeon_DEF_3E4C63EC";
+               public const string Region_DEF_5B242D32 = "yoo:Region_DEF_5B242D32";
+               public const string Room_DEF_FAFFF67E = "yoo:Room_DEF_FAFFF67E";
+               public const string Universe_DEF_97E4249B = "yoo:Universe_DEF_97E4249B";
+               public const string World_DEF_D577D412 = "yoo:World_DEF_D577D412";
            }
 
            public struct GameInputAssetGroup
@@ -40,42 +45,6 @@ namespace GDFramework.FrameData
            {
                public const string BundleName = "defaultpackage_core_res_prefabs_view_ui_gamemenupanel.prefab";
                public const string UI_GameMenuPanel = "yoo:UI_GameMenuPanel";
-           }
-
-           public struct UI_RegionPanelAssetGroup
-           {
-               public const string BundleName = "defaultpackage_core_res_prefabs_view_ui_regionpanel.prefab";
-               public const string UI_RegionPanel = "yoo:UI_RegionPanel";
-           }
-
-           public struct UI_RoomPanelAssetGroup
-           {
-               public const string BundleName = "defaultpackage_core_res_prefabs_view_ui_roompanel.prefab";
-               public const string UI_RoomPanel = "yoo:UI_RoomPanel";
-           }
-
-           public struct UI_UniversePanelAssetGroup
-           {
-               public const string BundleName = "defaultpackage_core_res_prefabs_view_ui_universepanel.prefab";
-               public const string UI_UniversePanel = "yoo:UI_UniversePanel";
-           }
-
-           public struct UI_WorldPanelAssetGroup
-           {
-               public const string BundleName = "defaultpackage_core_res_prefabs_view_ui_worldpanel.prefab";
-               public const string UI_WorldPanel = "yoo:UI_WorldPanel";
-           }
-
-           public struct UI_Editor_UniversePanelAssetGroup
-           {
-               public const string BundleName = "defaultpackage_core_res_prefabs_view_editor_ui_editor_universepanel.prefab";
-               public const string UI_Editor_UniversePanel = "yoo:UI_Editor_UniversePanel";
-           }
-
-           public struct UI_Editor_WorldPanelAssetGroup
-           {
-               public const string BundleName = "defaultpackage_core_res_prefabs_view_editor_ui_editor_worldpanel.prefab";
-               public const string UI_Editor_WorldPanel = "yoo:UI_Editor_WorldPanel";
            }
        }
 
