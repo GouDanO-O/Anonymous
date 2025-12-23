@@ -100,6 +100,11 @@ namespace GDFramework.MapSystem
         public bool IsAnimating => _isAnimating;
         
         /// <summary>
+        /// 是否已锁定
+        /// </summary>
+        public bool IsLocked => HasFlag(EntityFlags.IsLocked);
+        
+        /// <summary>
         /// 是否需要钥匙
         /// </summary>
         public bool RequiresKey => !string.IsNullOrEmpty(_requiredKeyId);

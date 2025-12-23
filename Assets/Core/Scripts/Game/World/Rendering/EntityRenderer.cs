@@ -66,6 +66,11 @@ namespace GDFramework.MapSystem.Rendering
         /// </summary>
         private float _viewportExtend = 2f;
         
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        private bool _useLighting = true;
+        
         #endregion
         
         #region 属性
@@ -73,6 +78,23 @@ namespace GDFramework.MapSystem.Rendering
         public Map Map => _map;
         public int ActiveViewCount => _activeViews?.Count ?? 0;
         public int PooledViewCount => _viewPool?.Count ?? 0;
+        
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        public bool UseLighting
+        {
+            get => _useLighting;
+            set
+            {
+                _useLighting = value;
+                // 应用到所有活跃的视图
+                foreach (var kvp in _activeViews)
+                {
+                    kvp.Value.UseLighting = value;
+                }
+            }
+        }
         
         #endregion
         
@@ -151,7 +173,7 @@ namespace GDFramework.MapSystem.Rendering
             
             // 添加 EntityView 组件
             EntityView view = go.AddComponent<EntityView>();
-            view.Initialize(this);
+            view.Initialize(this, _useLighting);
             
             return view;
         }

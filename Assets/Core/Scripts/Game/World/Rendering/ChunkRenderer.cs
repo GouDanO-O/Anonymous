@@ -2,10 +2,7 @@
  * ChunkRenderer.cs
  * 单个 Chunk 的渲染器
  * 
- * 负责：
- * - 渲染 Chunk 内所有 Tile 的所有层
- * - 每层使用独立的 Tilemap 或 SpriteRenderer 组
- * - 脏标记检测，按需重建渲染
+ * 支持 URP (Universal Render Pipeline) 2D Renderer
  */
 
 using System;
@@ -47,6 +44,11 @@ namespace GDFramework.MapSystem.Rendering
         private TilemapRenderer[] _tilemapRenderers;
         
         /// <summary>
+        /// Grid 组件
+        /// </summary>
+        private Grid _grid;
+        
+        /// <summary>
         /// 是否已初始化
         /// </summary>
         private bool _isInitialized;
@@ -61,12 +63,35 @@ namespace GDFramework.MapSystem.Rendering
         /// </summary>
         private bool[] _layerVisibility;
         
+        /// <summary>
+        /// 是否使用光照
+        /// </summary>
+        private bool _useLighting = true;
+        
+        /// <summary>
+        /// Tile 缓存（避免重复创建）
+        /// </summary>
+        private UnityEngine.Tilemaps.Tile[] _tileCache;
+        
         #endregion
         
         #region 属性
         
         public ChunkCoord ChunkCoord => _chunkCoord;
         public bool IsActive => _isActive;
+        
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        public bool UseLighting
+        {
+            get => _useLighting;
+            set
+            {
+                _useLighting = value;
+                ApplyMaterials();
+            }
+        }
         
         #endregion
         
@@ -75,15 +100,22 @@ namespace GDFramework.MapSystem.Rendering
         /// <summary>
         /// 初始化渲染器
         /// </summary>
-        public void Initialize(TileRenderer tileRenderer)
+        public void Initialize(TileRenderer tileRenderer, bool useLighting = true)
         {
             if (_isInitialized) return;
             
             _tileRenderer = tileRenderer;
+            _useLighting = useLighting;
             _layerVisibility = new bool[MapConstants.TILE_LAYER_COUNT];
+            
+            // 设置/获取 Grid 组件
+            SetupGrid();
             
             // 创建各层的 Tilemap
             CreateLayerTilemaps();
+            
+            // 应用 URP 材质
+            ApplyMaterials();
             
             // 默认所有层可见
             for (int i = 0; i < _layerVisibility.Length; i++)
@@ -91,8 +123,29 @@ namespace GDFramework.MapSystem.Rendering
                 _layerVisibility[i] = true;
             }
             
+            // 初始化 Tile 缓存
+            _tileCache = new UnityEngine.Tilemaps.Tile[256]; // 最多缓存 256 种 Tile
+            
             _isInitialized = true;
             _isActive = false;
+        }
+        
+        /// <summary>
+        /// 设置 Grid 组件
+        /// </summary>
+        private void SetupGrid()
+        {
+            _grid = GetComponent<Grid>();
+            if (_grid == null)
+            {
+                _grid = gameObject.AddComponent<Grid>();
+            }
+            
+            // 设置格子大小
+            _grid.cellSize = new Vector3(MapConstants.TILE_SIZE, MapConstants.TILE_SIZE, 0);
+            _grid.cellGap = Vector3.zero;
+            _grid.cellLayout = GridLayout.CellLayout.Rectangle;
+            _grid.cellSwizzle = GridLayout.CellSwizzle.XYZ;
         }
         
         /// <summary>
@@ -109,21 +162,39 @@ namespace GDFramework.MapSystem.Rendering
                 var config = layerConfigs[i];
                 
                 // 创建层 GameObject
-                GameObject layerGo = new GameObject($"Layer_{config.LayerName}");
+                GameObject layerGo = new GameObject($"Layer_{i}_{config.LayerName}");
                 layerGo.transform.SetParent(transform);
                 layerGo.transform.localPosition = Vector3.zero;
+                layerGo.transform.localRotation = Quaternion.identity;
+                layerGo.transform.localScale = Vector3.one;
                 
                 // 添加 Tilemap 组件
                 Tilemap tilemap = layerGo.AddComponent<Tilemap>();
+                tilemap.tileAnchor = new Vector3(0.5f, 0.5f, 0); // 中心锚点
+                
+                // 添加 TilemapRenderer 组件
                 TilemapRenderer renderer = layerGo.AddComponent<TilemapRenderer>();
                 
                 // 设置排序
                 renderer.sortingLayerName = config.SortingLayerName;
                 renderer.sortingOrder = config.BaseSortingOrder;
                 
+                // URP 特定设置
+                renderer.mode = TilemapRenderer.Mode.Chunk; // 使用 Chunk 模式提升性能
+                
                 _tilemaps[i] = tilemap;
                 _tilemapRenderers[i] = renderer;
             }
+        }
+        
+        /// <summary>
+        /// 应用 URP 材质
+        /// </summary>
+        private void ApplyMaterials()
+        {
+            if (_tilemapRenderers == null) return;
+            
+            URPMaterialHelper.SetupTilemapRenderers(_tilemapRenderers, _useLighting);
         }
         
         #endregion
@@ -218,6 +289,11 @@ namespace GDFramework.MapSystem.Rendering
             // 清空当前层
             tilemap.ClearAllTiles();
             
+            // 准备批量设置
+            var positions = new Vector3Int[MapConstants.TILES_PER_CHUNK];
+            var tiles = new UnityEngine.Tilemaps.TileBase[MapConstants.TILES_PER_CHUNK];
+            int tileCount = 0;
+            
             // 遍历 Chunk 内所有 Tile
             for (int y = 0; y < MapConstants.CHUNK_SIZE; y++)
             {
@@ -236,14 +312,56 @@ namespace GDFramework.MapSystem.Rendering
                     
                     if (sprite == null) continue;
                     
-                    // 创建 Tile 并设置
-                    Vector3Int cellPos = new Vector3Int(x, y, 0);
-                    UnityEngine.Tilemaps.Tile tile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
-                    tile.sprite = sprite;
+                    // 获取或创建 Tile
+                    UnityEngine.Tilemaps.Tile tile = GetOrCreateTile(layerData.tileId, sprite);
                     
-                    tilemap.SetTile(cellPos, tile);
+                    positions[tileCount] = new Vector3Int(x, y, 0);
+                    tiles[tileCount] = tile;
+                    tileCount++;
                 }
             }
+            
+            // 批量设置 Tiles（提升性能）
+            if (tileCount > 0)
+            {
+                // 创建正确大小的数组
+                var finalPositions = new Vector3Int[tileCount];
+                var finalTiles = new UnityEngine.Tilemaps.TileBase[tileCount];
+                Array.Copy(positions, finalPositions, tileCount);
+                Array.Copy(tiles, finalTiles, tileCount);
+                
+                tilemap.SetTiles(finalPositions, finalTiles);
+            }
+        }
+        
+        /// <summary>
+        /// 获取或创建 Tile 对象
+        /// </summary>
+        private UnityEngine.Tilemaps.Tile GetOrCreateTile(ushort tileId, Sprite sprite)
+        {
+            // 检查缓存
+            if (tileId < _tileCache.Length && _tileCache[tileId] != null)
+            {
+                var cached = _tileCache[tileId];
+                if (cached.sprite == sprite)
+                {
+                    return cached;
+                }
+            }
+            
+            // 创建新 Tile
+            var tile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
+            tile.sprite = sprite;
+            tile.color = Color.white;
+            tile.colliderType = UnityEngine.Tilemaps.Tile.ColliderType.None;
+            
+            // 缓存
+            if (tileId < _tileCache.Length)
+            {
+                _tileCache[tileId] = tile;
+            }
+            
+            return tile;
         }
         
         /// <summary>
@@ -287,8 +405,7 @@ namespace GDFramework.MapSystem.Rendering
                     
                     if (sprite != null)
                     {
-                        UnityEngine.Tilemaps.Tile tile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
-                        tile.sprite = sprite;
+                        var tile = GetOrCreateTile(layerData.tileId, sprite);
                         tilemap.SetTile(cellPos, tile);
                     }
                 }
@@ -338,6 +455,19 @@ namespace GDFramework.MapSystem.Rendering
         void OnDestroy()
         {
             ClearAllTilemaps();
+            
+            // 清理 Tile 缓存
+            if (_tileCache != null)
+            {
+                foreach (var tile in _tileCache)
+                {
+                    if (tile != null)
+                    {
+                        DestroyImmediate(tile);
+                    }
+                }
+                _tileCache = null;
+            }
         }
         
         #endregion

@@ -13,7 +13,7 @@ using UnityEngine;
 using GDFramework.MapSystem.Rendering;
 using GDFramework.MapSystem.Saving;
 
-namespace GDFramework.MapSystem.Editor
+namespace GDFramework.MapSystem
 {
     /// <summary>
     /// 地图编辑器 UI

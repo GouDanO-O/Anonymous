@@ -78,8 +78,12 @@ namespace GDFramework.MapSystem.Rendering
             _atlasCache = new Dictionary<string, Sprite[]>();
             _tileConfigs = new Dictionary<int, TileConfig>();
             _entityConfigs = new Dictionary<int, EntityConfig>();
+            _tilePlaceholderCache = new Dictionary<ushort, Sprite>();
+            _entityPlaceholderCache = new Dictionary<int, Sprite>();
             
             CreateDefaultSprites();
+            
+            Debug.Log("[SpriteManager] 初始化完成，占位精灵模式已启用");
         }
         
         #endregion
@@ -174,6 +178,34 @@ namespace GDFramework.MapSystem.Rendering
         
         #endregion
         
+        #region 占位精灵缓存
+        
+        /// <summary>
+        /// Tile 占位精灵缓存（按 TileId）
+        /// </summary>
+        private Dictionary<ushort, Sprite> _tilePlaceholderCache;
+        
+        /// <summary>
+        /// Entity 占位精灵缓存（按 ConfigId）
+        /// </summary>
+        private Dictionary<int, Sprite> _entityPlaceholderCache;
+        
+        /// <summary>
+        /// 是否使用占位精灵模式（没有实际资源时自动启用）
+        /// </summary>
+        private bool _usePlaceholderMode = true;
+        
+        /// <summary>
+        /// 是否使用占位精灵模式
+        /// </summary>
+        public bool UsePlaceholderMode
+        {
+            get => _usePlaceholderMode;
+            set => _usePlaceholderMode = value;
+        }
+        
+        #endregion
+        
         #region 精灵获取
         
         /// <summary>
@@ -187,13 +219,24 @@ namespace GDFramework.MapSystem.Rendering
             }
             
             var config = GetTileConfig(tileId);
-            if (config == null)
+            
+            // 如果有配置，尝试加载真实精灵
+            if (config != null)
             {
-                Debug.LogWarning($"[SpriteManager] 未找到 TileConfig: {tileId}");
-                return _errorSprite;
+                Sprite realSprite = TryLoadRealSprite(config.SpriteAtlas, config.SpriteNames, spriteVariant);
+                if (realSprite != null && realSprite != _errorSprite)
+                {
+                    return realSprite;
+                }
             }
             
-            return GetSpriteFromConfig(config.SpriteAtlas, config.SpriteNames, spriteVariant);
+            // 使用占位精灵
+            if (_usePlaceholderMode)
+            {
+                return GetTilePlaceholderSprite(tileId, config);
+            }
+            
+            return _errorSprite;
         }
         
         /// <summary>
@@ -202,13 +245,181 @@ namespace GDFramework.MapSystem.Rendering
         public Sprite GetEntitySprite(int configId, int spriteIndex = 0)
         {
             var config = GetEntityConfig(configId);
-            if (config == null)
+            
+            // 如果有配置，尝试加载真实精灵
+            if (config != null)
             {
-                Debug.LogWarning($"[SpriteManager] 未找到 EntityConfig: {configId}");
-                return _errorSprite;
+                Sprite realSprite = TryLoadRealSprite(config.SpriteAtlas, config.SpriteNames, spriteIndex);
+                if (realSprite != null && realSprite != _errorSprite)
+                {
+                    return realSprite;
+                }
             }
             
-            return GetSpriteFromConfig(config.SpriteAtlas, config.SpriteNames, spriteIndex);
+            // 使用占位精灵
+            if (_usePlaceholderMode)
+            {
+                return GetEntityPlaceholderSprite(configId, config);
+            }
+            
+            return _errorSprite;
+        }
+        
+        /// <summary>
+        /// 尝试加载真实精灵
+        /// </summary>
+        private Sprite TryLoadRealSprite(string atlasName, string[] spriteNames, int index)
+        {
+            if (spriteNames == null || spriteNames.Length == 0)
+            {
+                return null;
+            }
+            
+            index = Mathf.Clamp(index, 0, spriteNames.Length - 1);
+            string spriteName = spriteNames[index];
+            
+            return GetSprite(atlasName, spriteName);
+        }
+        
+        /// <summary>
+        /// 获取 Tile 占位精灵
+        /// </summary>
+        private Sprite GetTilePlaceholderSprite(ushort tileId, TileConfig config)
+        {
+            // 检查缓存
+            if (_tilePlaceholderCache.TryGetValue(tileId, out var cached))
+            {
+                return cached;
+            }
+            
+            // 根据 TileId 或 Category 生成颜色
+            Color color = GetTileColor(tileId, config);
+            string name = config != null ? config.TileName : $"Tile_{tileId}";
+            
+            Sprite sprite = CreateColoredSprite(color, name);
+            _tilePlaceholderCache[tileId] = sprite;
+            
+            return sprite;
+        }
+        
+        /// <summary>
+        /// 获取 Entity 占位精灵
+        /// </summary>
+        private Sprite GetEntityPlaceholderSprite(int configId, EntityConfig config)
+        {
+            // 检查缓存
+            if (_entityPlaceholderCache.TryGetValue(configId, out var cached))
+            {
+                return cached;
+            }
+            
+            // 根据 EntityType 生成颜色
+            Color color = GetEntityColor(configId, config);
+            string name = config != null ? config.EntityName : $"Entity_{configId}";
+            
+            Sprite sprite = CreateColoredSprite(color, name);
+            _entityPlaceholderCache[configId] = sprite;
+            
+            return sprite;
+        }
+        
+        /// <summary>
+        /// 根据 Tile 类型获取颜色
+        /// </summary>
+        private Color GetTileColor(ushort tileId, TileConfig config)
+        {
+            if (config != null)
+            {
+                // 根据分类返回不同颜色
+                switch (config.Category)
+                {
+                    case TileCategory.Terrain:
+                        // 地形 - 绿色系
+                        if (config.TileName.Contains("水") || config.TileName.Contains("Water"))
+                            return new Color(0.2f, 0.4f, 0.8f); // 蓝色 - 水
+                        if (config.TileName.Contains("泥") || config.TileName.Contains("Dirt"))
+                            return new Color(0.6f, 0.4f, 0.2f); // 棕色 - 泥土
+                        return new Color(0.3f, 0.7f, 0.3f); // 绿色 - 草地
+                        
+                    case TileCategory.Floor:
+                        // 地板 - 棕色/灰色系
+                        if (config.TileName.Contains("石") || config.TileName.Contains("Stone"))
+                            return new Color(0.5f, 0.5f, 0.55f); // 灰色 - 石地板
+                        return new Color(0.6f, 0.45f, 0.3f); // 棕色 - 木地板
+                        
+                    case TileCategory.FloorDecor:
+                        // 地面装饰 - 半透明
+                        return new Color(0.8f, 0.8f, 0.8f, 0.5f);
+                        
+                    case TileCategory.Wall:
+                        // 墙壁 - 深色
+                        if (config.TileName.Contains("石") || config.TileName.Contains("Stone"))
+                            return new Color(0.4f, 0.4f, 0.45f); // 深灰 - 石墙
+                        return new Color(0.5f, 0.35f, 0.2f); // 深棕 - 木墙
+                        
+                    case TileCategory.WallDecor:
+                        // 墙壁装饰
+                        return new Color(0.7f, 0.5f, 0.3f);
+                        
+                    case TileCategory.Roof:
+                        // 屋顶 - 红/棕色
+                        return new Color(0.6f, 0.3f, 0.2f);
+                        
+                    default:
+                        return Color.gray;
+                }
+            }
+            
+            // 没有配置，根据 TileId 生成随机但一致的颜色
+            return GenerateColorFromId(tileId);
+        }
+        
+        /// <summary>
+        /// 根据 Entity 类型获取颜色
+        /// </summary>
+        private Color GetEntityColor(int configId, EntityConfig config)
+        {
+            if (config != null)
+            {
+                switch (config.EntityType)
+                {
+                    case EntityType.Furniture:
+                        return new Color(0.7f, 0.5f, 0.3f); // 棕色 - 家具
+                        
+                    case EntityType.Container:
+                        return new Color(0.4f, 0.6f, 0.8f); // 蓝色 - 容器
+                        
+                    case EntityType.Door:
+                        return new Color(0.5f, 0.3f, 0.15f); // 深棕 - 门
+                        
+                    case EntityType.Window:
+                        return new Color(0.7f, 0.85f, 0.95f); // 浅蓝 - 窗
+                        
+                    case EntityType.DroppedItem:
+                        return new Color(0.9f, 0.8f, 0.2f); // 黄色 - 掉落物
+                        
+                    case EntityType.LightSource:
+                        return new Color(1f, 0.9f, 0.5f); // 亮黄 - 光源
+                        
+                    default:
+                        return new Color(0.8f, 0.8f, 0.8f);
+                }
+            }
+            
+            return GenerateColorFromId(configId);
+        }
+        
+        /// <summary>
+        /// 根据 ID 生成一致的颜色
+        /// </summary>
+        private Color GenerateColorFromId(int id)
+        {
+            // 使用简单的哈希来生成一致的颜色
+            float hue = (id * 0.618033988749895f) % 1f; // 黄金比例
+            float saturation = 0.5f + (id % 5) * 0.1f;
+            float value = 0.6f + (id % 3) * 0.1f;
+            
+            return Color.HSVToRGB(hue, saturation, value);
         }
         
         /// <summary>
@@ -235,7 +446,7 @@ namespace GDFramework.MapSystem.Rendering
         {
             if (string.IsNullOrEmpty(spriteName))
             {
-                return _defaultSprite;
+                return null;
             }
             
             // 构造缓存键
@@ -252,8 +463,11 @@ namespace GDFramework.MapSystem.Rendering
             // 加载精灵
             Sprite sprite = LoadSprite(atlasName, spriteName);
             
-            // 缓存结果
-            _spriteCache[cacheKey] = sprite;
+            // 缓存结果（只缓存成功加载的）
+            if (sprite != null && sprite != _errorSprite)
+            {
+                _spriteCache[cacheKey] = sprite;
+            }
             
             return sprite;
         }
@@ -275,10 +489,10 @@ namespace GDFramework.MapSystem.Rendering
             if (sprite != null) return sprite;
             
             // TODO: 方式3：通过 YooAsset 异步加载
-            // 这需要改为异步接口，这里先返回占位符
+            // 这需要改为异步接口，这里先返回 null
             
-            Debug.LogWarning($"[SpriteManager] 无法加载精灵: {atlasName}/{spriteName}");
-            return _errorSprite;
+            // 返回 null，让调用者决定是否使用占位精灵
+            return null;
         }
         
         /// <summary>
@@ -387,6 +601,8 @@ namespace GDFramework.MapSystem.Rendering
         {
             _spriteCache.Clear();
             _atlasCache.Clear();
+            _tilePlaceholderCache.Clear();
+            _entityPlaceholderCache.Clear();
         }
         
         /// <summary>

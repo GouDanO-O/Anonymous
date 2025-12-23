@@ -135,6 +135,11 @@ namespace GDFramework.MapSystem
         public bool HasBeenSearched => _hasBeenSearched;
         
         /// <summary>
+        /// 是否已被搜索（HasBeenSearched 的别名）
+        /// </summary>
+        public bool IsSearched => _hasBeenSearched;
+        
+        /// <summary>
         /// 所有槽位（只读）
         /// </summary>
         public IReadOnlyList<ContainerSlot> Slots => _slots;
@@ -279,6 +284,22 @@ namespace GDFramework.MapSystem
         }
         
         /// <summary>
+        /// 设置指定槽位的物品（通过参数）
+        /// </summary>
+        public void SetSlot(int slotIndex, int itemId, int count, float condition)
+        {
+            if (slotIndex < 0 || slotIndex >= _slots.Count) return;
+            
+            _slots[slotIndex] = new ContainerSlot
+            {
+                itemId = itemId,
+                count = count,
+                condition = (byte)Mathf.Clamp(condition, 0, 100)
+            };
+            MarkDirty();
+        }
+        
+        /// <summary>
         /// 清空指定槽位
         /// </summary>
         public ContainerSlot ClearSlot(int slotIndex)
@@ -304,6 +325,14 @@ namespace GDFramework.MapSystem
                 _slots[i] = ContainerSlot.Empty;
             }
             MarkDirty();
+        }
+        
+        /// <summary>
+        /// 清空所有物品（ClearAllItems 的别名）
+        /// </summary>
+        public void ClearAll()
+        {
+            ClearAllItems();
         }
         
         /// <summary>

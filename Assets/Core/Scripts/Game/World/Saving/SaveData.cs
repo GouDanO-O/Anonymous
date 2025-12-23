@@ -155,7 +155,7 @@ namespace GDFramework.MapSystem.Saving
         {
             entity.SetPosition(new TileCoord(tileX, tileY));
             entity.SetOffset(new Vector2(offsetX, offsetY));
-            entity.SetRotation((EntityRotation)rotation);
+            entity.SetRotation((Rotation)rotation);
             entity.SetFlags((EntityFlags)flags);
             entity.SetHealth(health, maxHealth);
         }

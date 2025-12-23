@@ -193,6 +193,11 @@ namespace GDFramework.MapSystem
         /// </summary>
         Trigger = 41,
         
+        /// <summary>
+        /// 楼层转换点（楼梯、梯子、电梯等）
+        /// </summary>
+        Transition = 42,
+        
         // ========== 生物类 ==========
         
         /// <summary>
@@ -372,7 +377,7 @@ namespace GDFramework.MapSystem
         /// <summary>
         /// 野外地图
         /// </summary>
-        Wilderness = 1,
+        Outdoor = 1,
         
         /// <summary>
         /// 室内地图（建筑内部的独立地图）

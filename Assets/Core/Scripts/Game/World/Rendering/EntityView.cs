@@ -61,6 +61,11 @@ namespace GDFramework.MapSystem.Rendering
         /// </summary>
         private EntityRenderer _entityRenderer;
         
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        private bool _useLighting = true;
+        
         #endregion
         
         #region 属性
@@ -69,6 +74,19 @@ namespace GDFramework.MapSystem.Rendering
         public int EntityId => _entity?.EntityId ?? MapConstants.INVALID_ENTITY_ID;
         public bool IsActive => _entity != null && gameObject.activeSelf;
         public SpriteRenderer SpriteRenderer => _spriteRenderer;
+        
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        public bool UseLighting
+        {
+            get => _useLighting;
+            set
+            {
+                _useLighting = value;
+                ApplyMaterial();
+            }
+        }
         
         #endregion
         
@@ -91,10 +109,25 @@ namespace GDFramework.MapSystem.Rendering
         /// <summary>
         /// 初始化视图
         /// </summary>
-        public void Initialize(EntityRenderer entityRenderer)
+        public void Initialize(EntityRenderer entityRenderer, bool useLighting = true)
         {
             _entityRenderer = entityRenderer;
+            _useLighting = useLighting;
             _isInitialized = true;
+            
+            // 应用 URP 材质
+            ApplyMaterial();
+        }
+        
+        /// <summary>
+        /// 应用 URP 材质
+        /// </summary>
+        private void ApplyMaterial()
+        {
+            if (_spriteRenderer != null)
+            {
+                URPMaterialHelper.SetupSpriteRenderer(_spriteRenderer, _useLighting);
+            }
         }
         
         #endregion

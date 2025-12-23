@@ -150,6 +150,16 @@ namespace GDFramework.MapSystem
         }
         
         /// <summary>
+        /// 返回设置指定层后的新 TileData（不可变方式）
+        /// </summary>
+        public TileData WithLayer(int layerIndex, TileLayerData layerData)
+        {
+            TileData result = this;
+            result.SetLayer(layerIndex, layerData);
+            return result;
+        }
+        
+        /// <summary>
         /// 索引器访问
         /// </summary>
         public TileLayerData this[int layerIndex]

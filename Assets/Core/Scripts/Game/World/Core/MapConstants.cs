@@ -115,6 +115,30 @@ namespace GDFramework.MapSystem
         
         #endregion
         
+        #region 楼层转换相关常量
+        
+        /// <summary>
+        /// 上行楼梯配置 ID
+        /// </summary>
+        public const int STAIRS_UP_CONFIG_ID = 4001;
+        
+        /// <summary>
+        /// 下行楼梯配置 ID
+        /// </summary>
+        public const int STAIRS_DOWN_CONFIG_ID = 4002;
+        
+        /// <summary>
+        /// 梯子配置 ID
+        /// </summary>
+        public const int LADDER_CONFIG_ID = 4003;
+        
+        /// <summary>
+        /// 电梯配置 ID
+        /// </summary>
+        public const int ELEVATOR_CONFIG_ID = 4004;
+        
+        #endregion
+        
         #region 位运算辅助
         
         /// <summary>

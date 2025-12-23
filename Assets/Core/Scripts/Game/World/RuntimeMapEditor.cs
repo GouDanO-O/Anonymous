@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GDFramework.MapSystem.Rendering;
 
-namespace GDFramework.MapSystem.Editor
+namespace GDFramework.MapSystem
 {
     /// <summary>
     /// 编辑模式
@@ -350,25 +350,25 @@ namespace GDFramework.MapSystem.Editor
         private void HandleInput()
         {
             // 获取鼠标位置对应的 Tile 坐标
-            Vector2 mouseWorld = _camera.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 mouseWorld = _camera.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
             TileCoord tileCoord = MapCoordUtility.WorldToTile(mouseWorld);
             
             bool validCoord = _map.IsTileCoordValid(tileCoord);
             
             // 鼠标按下
-            if (Input.GetMouseButtonDown(0) && validCoord)
+            if (UnityEngine.Input.GetMouseButtonDown(0) && validCoord)
             {
                 OnMouseDown(tileCoord);
             }
             
             // 鼠标拖动
-            if (Input.GetMouseButton(0) && _isDragging && validCoord)
+            if (UnityEngine.Input.GetMouseButton(0) && _isDragging && validCoord)
             {
                 OnMouseDrag(tileCoord);
             }
             
             // 鼠标释放
-            if (Input.GetMouseButtonUp(0))
+            if (UnityEngine.Input.GetMouseButtonUp(0))
             {
                 OnMouseUp(tileCoord);
             }
@@ -448,13 +448,13 @@ namespace GDFramework.MapSystem.Editor
         private void HandleShortcuts()
         {
             // Ctrl+Z - 撤销
-            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Z))
+            if (UnityEngine.Input.GetKey(KeyCode.LeftControl) && UnityEngine.Input.GetKeyDown(KeyCode.Z))
             {
                 Undo();
             }
             
             // Ctrl+Y - 重做
-            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Y))
+            if (UnityEngine.Input.GetKey(KeyCode.LeftControl) && UnityEngine.Input.GetKeyDown(KeyCode.Y))
             {
                 Redo();
             }
@@ -462,18 +462,18 @@ namespace GDFramework.MapSystem.Editor
             // 数字键切换层
             for (int i = 0; i < MapConstants.TILE_LAYER_COUNT; i++)
             {
-                if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1 + i))
                 {
                     SetLayer(i);
                 }
             }
             
             // [ ] 调整笔刷大小
-            if (Input.GetKeyDown(KeyCode.LeftBracket))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.LeftBracket))
             {
                 _brushSize = Mathf.Max(1, _brushSize - 1);
             }
-            if (Input.GetKeyDown(KeyCode.RightBracket))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.RightBracket))
             {
                 _brushSize = Mathf.Min(10, _brushSize + 1);
             }
@@ -812,7 +812,7 @@ namespace GDFramework.MapSystem.Editor
             if (!_isEnabled || _map == null || _camera == null) return;
             
             // 绘制光标
-            Vector2 mouseWorld = _camera.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 mouseWorld = _camera.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
             TileCoord tileCoord = MapCoordUtility.WorldToTile(mouseWorld);
             
             if (_map.IsTileCoordValid(tileCoord))

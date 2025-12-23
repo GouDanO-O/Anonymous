@@ -179,6 +179,89 @@ namespace GDFramework.MapSystem
             }
         }
         
+        #region 存档系统支持
+        
+        /// <summary>
+        /// 下一个实体ID（用于存档）
+        /// </summary>
+        public int NextEntityId => _nextEntityId;
+        
+        /// <summary>
+        /// 设置下一个实体ID（加载存档时使用）
+        /// </summary>
+        public void SetNextEntityId(int nextId)
+        {
+            _nextEntityId = nextId;
+        }
+        
+        /// <summary>
+        /// 获取所有实体
+        /// </summary>
+        public IReadOnlyCollection<MapEntity> GetAllEntities()
+        {
+            return _entities.Values as IReadOnlyCollection<MapEntity> 
+                   ?? new List<MapEntity>(_entities.Values);
+        }
+        
+        /// <summary>
+        /// 清除所有实体
+        /// </summary>
+        public void ClearAll()
+        {
+            _entities.Clear();
+            _entitiesByTile.Clear();
+            _entitiesByChunk.Clear();
+            _dirtyEntities.Clear();
+        }
+        
+        /// <summary>
+        /// 使用指定 ID 创建基础实体
+        /// </summary>
+        public MapEntity CreateEntityWithId(int entityId, int configId, EntityType type, TileCoord position)
+        {
+            var entity = new MapEntity(entityId, configId, type, _mapId, position);
+            RegisterEntityWithId(entity, entityId);
+            return entity;
+        }
+        
+        /// <summary>
+        /// 使用指定 ID 创建容器实体
+        /// </summary>
+        public ContainerEntity CreateContainerWithId(int entityId, int configId, TileCoord position, int capacity)
+        {
+            var entity = new ContainerEntity(entityId, configId, _mapId, position, capacity);
+            RegisterEntityWithId(entity, entityId);
+            return entity;
+        }
+        
+        /// <summary>
+        /// 使用指定 ID 创建门实体
+        /// </summary>
+        public DoorEntity CreateDoorWithId(int entityId, int configId, TileCoord position, DoorType doorType)
+        {
+            var entity = new DoorEntity(entityId, configId, _mapId, position, doorType);
+            RegisterEntityWithId(entity, entityId);
+            return entity;
+        }
+        
+        /// <summary>
+        /// 使用指定 ID 注册实体
+        /// </summary>
+        private void RegisterEntityWithId(MapEntity entity, int entityId)
+        {
+            _entities[entityId] = entity;
+            AddToTileIndex(entity);
+            AddToChunkIndex(entity);
+            
+            // 更新 nextEntityId
+            if (entityId >= _nextEntityId)
+            {
+                _nextEntityId = entityId + 1;
+            }
+        }
+        
+        #endregion
+        
         #endregion
         
         #region 实体删除
@@ -376,11 +459,6 @@ namespace GDFramework.MapSystem
                 return entity as T;
             }
             return null;
-        }
-        
-        public MapEntity GetNextEntity()
-        {
-            
         }
         
         /// <summary>

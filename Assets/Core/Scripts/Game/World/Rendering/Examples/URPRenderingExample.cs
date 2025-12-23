@@ -1,8 +1,8 @@
 /**
- * RenderingExample.cs
- * 渲染系统使用示例
+ * URPRenderingExample.cs
+ * URP 渲染系统使用示例
  * 
- * 展示如何设置和使用 MapRenderer
+ * 展示如何在 URP 2D 管线下使用 MapRenderer
  */
 
 using UnityEngine;
@@ -10,16 +10,21 @@ using UnityEngine;
 namespace GDFramework.MapSystem.Rendering.Examples
 {
     /// <summary>
-    /// 渲染系统使用示例
+    /// URP 渲染系统使用示例
     /// </summary>
-    public class RenderingExample : MonoBehaviour
+    public class URPRenderingExample : MonoBehaviour
     {
-        [Header("Settings")]
+        [Header("Map Settings")]
         [SerializeField]
         private int _mapWidthInChunks = 4;
         
         [SerializeField]
         private int _mapHeightInChunks = 4;
+        
+        [Header("Rendering Settings")]
+        [SerializeField]
+        [Tooltip("是否使用 2D 光照（需要 Global Light 2D）")]
+        private bool _useLighting = true;
         
         [Header("References")]
         [SerializeField]
@@ -30,7 +35,10 @@ namespace GDFramework.MapSystem.Rendering.Examples
         
         void Start()
         {
-            Debug.Log("=== 渲染系统示例 ===\n");
+            Debug.Log("=== URP 渲染系统示例 ===\n");
+            
+            // 验证 URP 设置
+            ValidateSetup();
             
             // 1. 初始化 SpriteManager（通常从 Luban 加载配置）
             InitializeSpriteManager();
@@ -44,7 +52,23 @@ namespace GDFramework.MapSystem.Rendering.Examples
             // 4. 设置相机
             SetupCamera();
             
-            Debug.Log("渲染系统初始化完成！使用 WASD 移动相机，I 键切换室内/室外");
+            PrintControls();
+        }
+        
+        /// <summary>
+        /// 验证 URP 设置
+        /// </summary>
+        void ValidateSetup()
+        {
+            // 检查 Sorting Layers
+            if (!URPSetupGuide.ValidateSortingLayers())
+            {
+                Debug.LogError("Sorting Layers 设置不完整！请查看设置指南。");
+                URPSetupGuide.PrintSetupInstructions();
+            }
+            
+            // 检查 URP
+            URPSetupGuide.ValidateURPSetup();
         }
         
         /// <summary>
@@ -90,12 +114,13 @@ namespace GDFramework.MapSystem.Rendering.Examples
             // 建造一些建筑
             BuildHouse(10, 10, 8, 6);
             BuildHouse(25, 15, 6, 5);
+            BuildHouse(5, 25, 10, 8);
             
             // 建造道路
-            for (int x = 5; x < 35; x++)
+            for (int x = 0; x < _map.WidthInTiles; x++)
             {
                 _map.SetTileLayer(new TileCoord(x, 8), MapConstants.LAYER_FLOOR, 
-                    TileLayerData.Create(11)); // 石地板作为道路
+                    TileLayerData.Create(11));
             }
             
             // 放置一些实体
@@ -132,7 +157,6 @@ namespace GDFramework.MapSystem.Rendering.Examples
                     
                     if (isEdge)
                     {
-                        // 墙壁（南墙中间留门）
                         bool isDoor = y == startY && x == startX + width / 2;
                         if (!isDoor)
                         {
@@ -143,7 +167,6 @@ namespace GDFramework.MapSystem.Rendering.Examples
                         }
                         else
                         {
-                            // 门框位置
                             _map.SetTile(coord, TileData.Empty
                                 .WithFloor(10)
                                 .WithRoof(30));
@@ -151,7 +174,6 @@ namespace GDFramework.MapSystem.Rendering.Examples
                     }
                     else
                     {
-                        // 内部
                         _map.SetTile(coord, TileData.Empty
                             .WithFloor(10)
                             .WithRoof(30));
@@ -168,6 +190,9 @@ namespace GDFramework.MapSystem.Rendering.Examples
             // 创建 MapRenderer
             GameObject rendererGo = new GameObject("MapRenderer");
             _mapRenderer = rendererGo.AddComponent<MapRenderer>();
+            
+            // 设置光照模式
+            _mapRenderer.UseLighting = _useLighting;
             
             // 初始化
             _mapRenderer.Initialize(_map);
@@ -189,14 +214,32 @@ namespace GDFramework.MapSystem.Rendering.Examples
                 return;
             }
             
-            // 设置相机为正交模式
+            // 确保相机是正交模式
             _camera.orthographic = true;
-            _camera.orthographicSize = 8f;
+            _camera.orthographicSize = 10f;
+            
+            // 设置背景色
+            _camera.backgroundColor = new Color(0.1f, 0.1f, 0.15f);
             
             // 居中到地图中央
             float centerX = _mapWidthInChunks * MapConstants.CHUNK_SIZE * MapConstants.TILE_SIZE * 0.5f;
             float centerY = _mapHeightInChunks * MapConstants.CHUNK_SIZE * MapConstants.TILE_SIZE * 0.5f;
             _camera.transform.position = new Vector3(centerX, centerY, -10);
+        }
+        
+        void PrintControls()
+        {
+            Debug.Log(@"
+=== 控制说明 ===
+WASD / 方向键: 移动相机
+鼠标滚轮: 缩放
+I: 切换室内模式（隐藏/显示屋顶）
+L: 切换光照模式
+P: 暂停/恢复渲染
+R: 强制刷新
+鼠标左键: 显示 Tile 信息
+================
+");
         }
         
         void Update()
@@ -231,8 +274,8 @@ namespace GDFramework.MapSystem.Rendering.Examples
             if (scroll != 0)
             {
                 _camera.orthographicSize = Mathf.Clamp(
-                    _camera.orthographicSize - scroll * 2f,
-                    2f, 20f
+                    _camera.orthographicSize - scroll * 3f,
+                    3f, 30f
                 );
             }
         }
@@ -248,6 +291,14 @@ namespace GDFramework.MapSystem.Rendering.Examples
                 bool currentRoofVisible = _mapRenderer.TileRenderer.IsGlobalLayerVisible(MapConstants.LAYER_ROOF);
                 _mapRenderer.SetRoofVisible(!currentRoofVisible);
                 Debug.Log($"屋顶可见性: {!currentRoofVisible}");
+            }
+            
+            // L 键 - 切换光照模式
+            if (UnityEngine.Input.GetKeyDown(KeyCode.L))
+            {
+                _useLighting = !_useLighting;
+                _mapRenderer.UseLighting = _useLighting;
+                Debug.Log($"光照模式: {_useLighting}");
             }
             
             // P 键 - 暂停/恢复渲染更新
@@ -285,6 +336,7 @@ namespace GDFramework.MapSystem.Rendering.Examples
                     
                     Debug.Log($"点击位置: {tileCoord}");
                     Debug.Log($"  Tile: {tile}");
+                    Debug.Log($"  可行走: {_map.IsWalkable(tileCoord)}");
                     Debug.Log($"  实体数量: {entities.Count}");
                     foreach (var e in entities)
                     {
@@ -300,6 +352,24 @@ namespace GDFramework.MapSystem.Rendering.Examples
             {
                 _mapRenderer.Cleanup();
             }
+        }
+        
+        /// <summary>
+        /// 在编辑器中绘制 Gizmos
+        /// </summary>
+        void OnDrawGizmos()
+        {
+            if (_map == null) return;
+            
+            // 绘制地图边界
+            Gizmos.color = Color.yellow;
+            Vector3 size = new Vector3(
+                _map.WidthInTiles * MapConstants.TILE_SIZE,
+                _map.HeightInTiles * MapConstants.TILE_SIZE,
+                0
+            );
+            Vector3 center = size * 0.5f;
+            Gizmos.DrawWireCube(center, size);
         }
     }
 }

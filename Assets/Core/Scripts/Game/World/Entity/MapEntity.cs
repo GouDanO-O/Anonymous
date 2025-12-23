@@ -130,6 +130,7 @@ namespace GDFramework.MapSystem
         
         public TileCoord TilePosition => _tilePosition;
         public Vector2 PositionOffset => _positionOffset;
+        public Vector2 Offset => _positionOffset;  // 别名
         public Rotation Rotation => _rotation;
         
         public EntityFlags Flags => _flags;
@@ -288,6 +289,25 @@ namespace GDFramework.MapSystem
             MarkDirty();
         }
         
+        /// <summary>
+        /// 设置所有标志（替换现有标志）
+        /// </summary>
+        public void SetFlags(EntityFlags flags)
+        {
+            _flags = flags;
+            MarkDirty();
+        }
+        
+        /// <summary>
+        /// 设置生命值
+        /// </summary>
+        public void SetHealth(int health, int maxHealth)
+        {
+            _health = health;
+            _maxHealth = maxHealth;
+            MarkDirty();
+        }
+        
         #endregion
         
         #region 位置操作
@@ -307,12 +327,28 @@ namespace GDFramework.MapSystem
         }
         
         /// <summary>
+        /// 设置位置（SetTilePosition 的别名）
+        /// </summary>
+        public void SetPosition(TileCoord newPosition)
+        {
+            SetTilePosition(newPosition);
+        }
+        
+        /// <summary>
         /// 设置精确位置偏移
         /// </summary>
         public void SetPositionOffset(Vector2 offset)
         {
             _positionOffset = offset;
             MarkDirty();
+        }
+        
+        /// <summary>
+        /// 设置偏移（SetPositionOffset 的别名）
+        /// </summary>
+        public void SetOffset(Vector2 offset)
+        {
+            SetPositionOffset(offset);
         }
         
         /// <summary>

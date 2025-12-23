@@ -1,6 +1,8 @@
 /**
  * RenderingConstants.cs
  * 渲染系统常量和配置
+ * 
+ * 支持 URP (Universal Render Pipeline) 2D Renderer
  */
 
 using System;
@@ -55,6 +57,25 @@ namespace GDFramework.MapSystem.Rendering
     /// </summary>
     public static class RenderingConstants
     {
+        #region URP 材质路径
+        
+        /// <summary>
+        /// URP 2D Sprite Lit 默认材质路径
+        /// </summary>
+        public const string URP_SPRITE_LIT_MATERIAL = "Sprite-Lit-Default";
+        
+        /// <summary>
+        /// URP 2D Sprite Unlit 默认材质路径
+        /// </summary>
+        public const string URP_SPRITE_UNLIT_MATERIAL = "Sprite-Unlit-Default";
+        
+        /// <summary>
+        /// URP 2D Sprite Mask 材质路径
+        /// </summary>
+        public const string URP_SPRITE_MASK_MATERIAL = "Sprite-Mask-Default";
+        
+        #endregion
+        
         #region Sorting Layer 名称
         // 需要在 Unity 中预先创建这些 Sorting Layer
         // Edit -> Project Settings -> Tags and Layers -> Sorting Layers

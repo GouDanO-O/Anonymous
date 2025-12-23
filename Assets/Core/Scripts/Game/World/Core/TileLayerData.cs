@@ -65,6 +65,16 @@ namespace GDFramework.MapSystem
             this.damage = 0;
         }
         
+        /// <summary>
+        /// 从原始数据创建（用于反序列化）
+        /// </summary>
+        public TileLayerData(ushort tileId, byte spriteAndFlags, byte damage)
+        {
+            this.tileId = tileId;
+            this.spriteAndFlags = spriteAndFlags;
+            this.damage = damage;
+        }
+        
         #endregion
         
         #region 静态工厂方法

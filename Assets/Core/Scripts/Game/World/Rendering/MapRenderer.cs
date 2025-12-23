@@ -24,6 +24,11 @@ namespace GDFramework.MapSystem.Rendering
         [Tooltip("主相机（留空则自动获取 Camera.main）")]
         private Camera _mainCamera;
         
+        [Header("URP Settings")]
+        [SerializeField]
+        [Tooltip("是否使用 2D 光照")]
+        private bool _useLighting = true;
+        
         [Header("Debug")]
         [SerializeField]
         private bool _showDebugInfo = false;
@@ -77,6 +82,20 @@ namespace GDFramework.MapSystem.Rendering
             set => _mainCamera = value;
         }
         
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        public bool UseLighting
+        {
+            get => _useLighting;
+            set
+            {
+                _useLighting = value;
+                if (_tileRenderer != null) _tileRenderer.UseLighting = value;
+                if (_entityRenderer != null) _entityRenderer.UseLighting = value;
+            }
+        }
+        
         #endregion
         
         #region 初始化
@@ -112,17 +131,23 @@ namespace GDFramework.MapSystem.Rendering
                 return;
             }
             
+            // 初始化 URP 材质
+            URPMaterialHelper.Initialize();
+            
             // 创建子渲染器
             CreateSubRenderers();
             
             // 初始化子渲染器
             _tileRenderer.Initialize(map, _mainCamera);
+            _tileRenderer.UseLighting = _useLighting;
+            
             _entityRenderer.Initialize(map, _mainCamera);
+            _entityRenderer.UseLighting = _useLighting;
             
             _isInitialized = true;
             _isPaused = false;
             
-            Debug.Log($"[MapRenderer] 初始化完成: Map={map.MapId}, Camera={_mainCamera.name}");
+            Debug.Log($"[MapRenderer] 初始化完成: Map={map.MapId}, Camera={_mainCamera.name}, Lighting={_useLighting}");
         }
         
         /// <summary>

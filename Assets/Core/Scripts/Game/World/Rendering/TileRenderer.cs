@@ -145,6 +145,28 @@ namespace GDFramework.MapSystem.Rendering
         }
         
         /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        private bool _useLighting = true;
+        
+        /// <summary>
+        /// 是否使用 2D 光照
+        /// </summary>
+        public bool UseLighting
+        {
+            get => _useLighting;
+            set
+            {
+                _useLighting = value;
+                // 应用到所有活跃的渲染器
+                foreach (var kvp in _activeChunkRenderers)
+                {
+                    kvp.Value.UseLighting = value;
+                }
+            }
+        }
+        
+        /// <summary>
         /// 创建新的 ChunkRenderer
         /// </summary>
         private ChunkRenderer CreateChunkRenderer()
@@ -152,12 +174,8 @@ namespace GDFramework.MapSystem.Rendering
             GameObject go = new GameObject("ChunkRenderer");
             go.transform.SetParent(_chunkContainer);
             
-            // 添加 Grid 组件（Tilemap 需要）
-            Grid grid = go.AddComponent<Grid>();
-            grid.cellSize = new Vector3(MapConstants.TILE_SIZE, MapConstants.TILE_SIZE, 0);
-            
             ChunkRenderer renderer = go.AddComponent<ChunkRenderer>();
-            renderer.Initialize(this);
+            renderer.Initialize(this, _useLighting);
             
             return renderer;
         }
