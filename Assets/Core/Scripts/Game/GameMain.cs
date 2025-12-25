@@ -8,7 +8,6 @@ namespace Core.Game
         protected override void Register_System()
         {
             base.Register_System();
-
         }
         
         protected override void Register_Model()
