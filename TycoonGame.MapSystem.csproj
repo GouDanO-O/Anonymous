@@ -46,42 +46,6 @@
     <Analyzer Include="E:\UnityDownload\UnityEditor\6000.3.2f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Defs\DefBase.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Coords\CellCoord.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Coords\CoordUtility.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Site\TileGrid.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Region\Pathfinder.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\MapTestScene.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Entity\EntityTypes.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\CameraController.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Entity\EntityGrid.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Coords\GlobalCoord.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Region\RoomManager.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\DebugRenderer.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Defs\DefDatabase.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Defs\MapEnums.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Site\FloorConnectionManager.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Coords\Direction.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\TileRenderer.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Defs\TileDefs.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\SpriteManager.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Entity\EntityManager.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\EntityRenderer.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Region\Room.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Rendering\MapRenderer.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Site\Floor.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Region\Region.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Coords\IntVec2.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Region\RegionGrid.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Coords\Rotation.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Site\SiteConfig.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Entity\Entity.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Defs\DefaultDefs.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Entity\EntityComp.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Entity\EntityLister.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Defs\EntityDef.cs" />
-    <Compile Include="Assets\Core\Scripts\Game\MapSystem\Site\Site.cs" />
-    <None Include="Assets\Core\Scripts\Game\MapSystem\TycoonGame.MapSystem.asmdef" />
     <Reference Include="UnityEngine">
       <HintPath>E:\UnityDownload\UnityEditor\6000.3.2f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
     </Reference>
@@ -933,6 +897,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Assets\Core\Scripts\Game\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

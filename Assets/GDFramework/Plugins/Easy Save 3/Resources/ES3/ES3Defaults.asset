@@ -37,7 +37,6 @@ MonoBehaviour:
     assemblyNames:
     - Assembly-CSharp
     - Luban.Runtime
-    - TycoonGame.MapSystem
     - UniTask
     - UniTask.Addressables
     - UniTask.DOTween
