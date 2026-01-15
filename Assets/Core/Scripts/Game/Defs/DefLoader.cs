@@ -108,15 +108,6 @@ namespace Core.Game.Defs
         /// </summary>
         private static void LoadTerrainDefs()
         {
-            // TODO: 从Luban加载
-            // var tables = LubanKit.Instance.Tables;
-            // foreach (var row in tables.TbTerrainDef.DataList)
-            // {
-            //     var def = ConvertToTerrainDef(row);
-            //     DefDataBase<TerrainDef>.Add(def);
-            // }
-
-            // 临时：添加示例数据用于测试
             AddSampleTerrainDefs();
         }
 

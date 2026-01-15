@@ -3,7 +3,6 @@ setlocal
 
 set WORKSPACE=.
 set LUBAN_DLL=%WORKSPACE%\Luban\Luban.dll
-set CONF_ROOT=%~dp0Configs
 set OUTPUT_CODE_DIR=%~dp0..\Assets\Core\Scripts\Game\Config
 set OUTPUT_DATA_DIR=%~dp0..\Assets\StreamingAssets\ConfigData
 
@@ -23,7 +22,7 @@ echo ================================================
 echo  Luban Configuration Generator
 echo ================================================
 echo.
-echo Config Root: %CONF_ROOT%
+echo Config Root: %WORKSPACE%
 echo Code Output: %OUTPUT_CODE_DIR%
 echo Data Output: %OUTPUT_DATA_DIR%
 echo.
@@ -33,7 +32,7 @@ dotnet %LUBAN_DLL% ^
     -t all ^
     -c cs-simple-json ^
     -d json ^
-    --conf %CONF_ROOT%\luban.conf ^
+    --conf %WORKSPACE%\luban.conf ^
     -x outputCodeDir=%OUTPUT_CODE_DIR% ^
     -x outputDataDir=%OUTPUT_DATA_DIR%
 
