@@ -9,20 +9,14 @@ using UnityEngine.Events;
 namespace Core.Game.Map.System
 {
     /// <summary>
-    /// 房间管理系统
-    /// 负责房间检测、管理和查询
+    /// 房间系统
+    /// 管理房间检测和房间数据
     /// </summary>
     public class RoomSystem : AbstractSystem
     {
-        #region 数据
+        #region 引用
 
         private MapDataModel _mapDataModel;
-
-        /// <summary>
-        /// 所有楼层的房间数据
-        /// Key: 楼层, Value: 该楼层的房间数据
-        /// </summary>
-        private Dictionary<int, FloorRoomData> _floorRoomDataDict;
 
         #endregion
 
@@ -31,27 +25,23 @@ namespace Core.Game.Map.System
         /// <summary>
         /// 房间检测完成事件
         /// </summary>
-        public UnityAction<int> OnRoomDetectionComplete;
-
-        #endregion
-
-        #region 属性
+        public UnityAction<int> OnRoomsDetected;
 
         /// <summary>
-        /// 是否已检测房间
+        /// 房间数据变化事件
         /// </summary>
-        public bool IsRoomDetected => _floorRoomDataDict != null && _floorRoomDataDict.Count > 0;
+        public UnityAction<int, int> OnRoomChanged;
 
         #endregion
+
+        #region 初始化
 
         protected override void OnInit()
         {
             _mapDataModel = this.GetModel<MapDataModel>();
-            _floorRoomDataDict = new Dictionary<int, FloorRoomData>();
 
             // 订阅地图加载事件
             _mapDataModel.OnMapLoaded += OnMapLoaded;
-            _mapDataModel.OnMapUnloaded += OnMapUnloaded;
         }
 
         protected override void OnDeinit()
@@ -59,9 +49,10 @@ namespace Core.Game.Map.System
             if (_mapDataModel != null)
             {
                 _mapDataModel.OnMapLoaded -= OnMapLoaded;
-                _mapDataModel.OnMapUnloaded -= OnMapUnloaded;
             }
         }
+
+        #endregion
 
         #region 事件处理
 
@@ -69,11 +60,6 @@ namespace Core.Game.Map.System
         {
             // 地图加载后自动检测房间
             DetectAllRooms();
-        }
-
-        private void OnMapUnloaded()
-        {
-            ClearRoomData();
         }
 
         #endregion
@@ -85,114 +71,97 @@ namespace Core.Game.Map.System
         /// </summary>
         public void DetectAllRooms()
         {
-            if (_mapDataModel.CurrentMap == null)
+            if (!_mapDataModel.IsMapLoaded)
                 return;
 
-            ClearRoomData();
-
-            _floorRoomDataDict = RoomDetectionUtility.DetectAllRooms(_mapDataModel.CurrentMap);
+            RoomDetectionUtility.DetectAllRooms(_mapDataModel.CurrentMap);
 
             int totalRooms = 0;
-            foreach (var kvp in _floorRoomDataDict)
+            for (int floor = 0; floor < _mapDataModel.FloorCount; floor++)
             {
-                totalRooms += kvp.Value.Rooms.Count;
+                var floorRoomData = _mapDataModel.CurrentMap.GetFloorRoomData(floor);
+                if (floorRoomData != null)
+                {
+                    totalRooms += floorRoomData.Rooms.Count;
+                }
             }
 
-            Debug.Log($"[RoomSystem] Detected {totalRooms} rooms across {_floorRoomDataDict.Count} floors");
-
-            OnRoomDetectionComplete?.Invoke(totalRooms);
+            Debug.Log($"[RoomSystem] Detected {totalRooms} rooms across all floors");
+            OnRoomsDetected?.Invoke(totalRooms);
         }
 
         /// <summary>
-        /// 检测单层楼的房间
+        /// 检测指定楼层的房间
         /// </summary>
         public void DetectRoomsInFloor(int floor)
         {
-            if (_mapDataModel.CurrentMap == null)
+            if (!_mapDataModel.IsMapLoaded)
                 return;
 
             var floorRoomData = RoomDetectionUtility.DetectRoomsInFloor(_mapDataModel.CurrentMap, floor);
-            _floorRoomDataDict[floor] = floorRoomData;
-        }
+            _mapDataModel.CurrentMap.SetFloorRoomData(floor, floorRoomData);
 
-        /// <summary>
-        /// 清空房间数据
-        /// </summary>
-        public void ClearRoomData()
-        {
-            _floorRoomDataDict?.Clear();
+            OnRoomsDetected?.Invoke(floorRoomData.Rooms.Count);
         }
 
         /// <summary>
         /// 获取格子所属的房间ID
         /// </summary>
-        /// <returns>房间ID，-1 表示不在任何房间内（室外）</returns>
-        public int GetRoomId(int x, int y, int floor)
+        public int GetRoomId(int x, int y, int floor = -1)
         {
-            if (!_floorRoomDataDict.TryGetValue(floor, out var floorRoomData))
-                return -1;
+            if (floor < 0)
+                floor = _mapDataModel.CurrentFloor;
 
-            return floorRoomData.GetRoomId(x, y);
+            return _mapDataModel.GetRoomId(x, y, floor);
         }
 
         /// <summary>
-        /// 获取格子所属的房间
+        /// 获取房间数据
         /// </summary>
-        public RoomData GetRoom(int x, int y, int floor)
+        public RoomData GetRoom(int roomId, int floor = -1)
         {
-            if (!_floorRoomDataDict.TryGetValue(floor, out var floorRoomData))
-                return null;
+            if (floor < 0)
+                floor = _mapDataModel.CurrentFloor;
 
-            return floorRoomData.GetRoom(x, y);
+            return _mapDataModel.GetRoom(roomId, floor);
         }
 
         /// <summary>
         /// 获取指定楼层的所有房间
         /// </summary>
-        public List<RoomData> GetRoomsInFloor(int floor)
+        public List<RoomData> GetRoomsInFloor(int floor = -1)
         {
-            if (!_floorRoomDataDict.TryGetValue(floor, out var floorRoomData))
-                return new List<RoomData>();
+            if (floor < 0)
+                floor = _mapDataModel.CurrentFloor;
 
-            return floorRoomData.Rooms;
+            var floorRoomData = _mapDataModel.CurrentMap?.GetFloorRoomData(floor);
+            return floorRoomData?.Rooms ?? new List<RoomData>();
         }
 
         /// <summary>
-        /// 获取指定ID的房间
+        /// 检查坐标是否在室内
         /// </summary>
-        public RoomData GetRoomById(int roomId, int floor)
+        public bool IsCellIndoor(int x, int y, int floor = -1)
         {
-            if (!_floorRoomDataDict.TryGetValue(floor, out var floorRoomData))
-                return null;
+            if (floor < 0)
+                floor = _mapDataModel.CurrentFloor;
 
-            return floorRoomData.Rooms.Find(r => r.RoomId == roomId);
+            return RoomDetectionUtility.IsCellIndoor(_mapDataModel.CurrentMap, x, y, floor);
         }
 
         /// <summary>
-        /// 检查格子是否在室内
+        /// 刷新指定区域的房间检测
         /// </summary>
-        public bool IsCellIndoor(int x, int y, int floor)
+        public void RefreshRoomsInArea(int minX, int minY, int maxX, int maxY, int floor = -1)
         {
-            return GetRoomId(x, y, floor) >= 0;
-        }
+            if (!_mapDataModel.IsMapLoaded)
+                return;
 
-        /// <summary>
-        /// 检查两个格子是否在同一个房间
-        /// </summary>
-        public bool IsInSameRoom(int x1, int y1, int x2, int y2, int floor)
-        {
-            int roomId1 = GetRoomId(x1, y1, floor);
-            int roomId2 = GetRoomId(x2, y2, floor);
+            if (floor < 0)
+                floor = _mapDataModel.CurrentFloor;
 
-            return roomId1 >= 0 && roomId1 == roomId2;
-        }
-
-        /// <summary>
-        /// 获取楼层房间数据
-        /// </summary>
-        public FloorRoomData GetFloorRoomData(int floor)
-        {
-            return _floorRoomDataDict.TryGetValue(floor, out var data) ? data : null;
+            // 简化实现：重新检测整层
+            DetectRoomsInFloor(floor);
         }
 
         #endregion

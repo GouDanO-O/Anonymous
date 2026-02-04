@@ -6,7 +6,7 @@ namespace Core.Game.Map.Define
     public enum EGroundType : byte
     {
         /// <summary>
-        /// 无/空
+        /// 无地面
         /// </summary>
         None = 0,
 
@@ -26,44 +26,23 @@ namespace Core.Game.Map.Define
         Sand = 3,
 
         /// <summary>
-        /// 石头地面
+        /// 石地
         /// </summary>
         Stone = 4,
 
         /// <summary>
-        /// 水
+        /// 水面
         /// </summary>
         Water = 5,
-    }
-
-    /// <summary>
-    /// 地板类型（人造地板）
-    /// </summary>
-    public enum EFloorType : byte
-    {
-        /// <summary>
-        /// 无地板
-        /// </summary>
-        None = 0,
 
         /// <summary>
-        /// 木地板
+        /// 雪地
         /// </summary>
-        Wood = 1,
+        Snow = 6,
 
         /// <summary>
-        /// 瓷砖
+        /// 沼泽
         /// </summary>
-        Tile = 2,
-
-        /// <summary>
-        /// 混凝土
-        /// </summary>
-        Concrete = 3,
-
-        /// <summary>
-        /// 地毯
-        /// </summary>
-        Carpet = 4,
+        Swamp = 7
     }
 }

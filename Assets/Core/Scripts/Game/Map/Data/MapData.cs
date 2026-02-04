@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Generic;
 using Core.Game.Map.Define;
+using UnityEngine;
 
 namespace Core.Game.Map.Data
 {
     /// <summary>
-    /// 地图数据
+    /// 地图数据（管理所有楼层的Chunk）
     /// </summary>
     [Serializable]
     public class MapData
     {
-        #region 基础信息
+        #region 基础属性
 
         /// <summary>
         /// 地图名称
@@ -38,23 +40,31 @@ namespace Core.Game.Map.Data
 
         #endregion
 
-        #region Chunk 数据
+        #region Chunk数据
 
         /// <summary>
-        /// Chunk 宽度数量
+        /// Chunk数据 [floor, chunkY, chunkX]
         /// </summary>
-        public int ChunkCountX;
+        private ChunkData[,,] _chunks;
 
         /// <summary>
-        /// Chunk 高度数量
+        /// Chunk列数
         /// </summary>
-        public int ChunkCountY;
+        public int ChunkCountX { get; private set; }
 
         /// <summary>
-        /// 所有 Chunk 数据
-        /// 三维数组：[floor, chunkY, chunkX]
+        /// Chunk行数
         /// </summary>
-        public ChunkData[,,] Chunks;
+        public int ChunkCountY { get; private set; }
+
+        #endregion
+
+        #region 房间数据
+
+        /// <summary>
+        /// 每层楼的房间数据
+        /// </summary>
+        private Dictionary<int, FloorRoomData> _floorRoomData;
 
         #endregion
 
@@ -62,68 +72,75 @@ namespace Core.Game.Map.Data
 
         public MapData()
         {
+            _floorRoomData = new Dictionary<int, FloorRoomData>();
         }
 
-        public MapData(string mapName, int width, int height, int floorCount, int seed = 0)
+        public MapData(string mapName, int width, int height, int floorCount, int seed) : this()
         {
             MapName = mapName;
             Width = width;
             Height = height;
-            FloorCount = floorCount;
+            FloorCount = Mathf.Clamp(floorCount, 1, MapDefine.MaxFloorCount);
             Seed = seed;
 
-            // 计算 Chunk 数量（向上取整）
-            ChunkCountX = (width + MapDefine.ChunkWidth - 1) / MapDefine.ChunkWidth;
-            ChunkCountY = (height + MapDefine.ChunkHeight - 1) / MapDefine.ChunkHeight;
-
-            // 初始化 Chunk 数组
-            Chunks = new ChunkData[floorCount, ChunkCountY, ChunkCountX];
+            InitializeChunks();
         }
 
         #endregion
 
-        #region Chunk 操作
+        #region 初始化
 
         /// <summary>
-        /// 获取 Chunk
+        /// 初始化Chunk数组
         /// </summary>
-        /// <param name="chunkX">Chunk X 索引</param>
-        /// <param name="chunkY">Chunk Y 索引</param>
-        /// <param name="floor">楼层</param>
+        private void InitializeChunks()
+        {
+            // 计算需要多少个Chunk（向上取整）
+            ChunkCountX = Mathf.CeilToInt((float)Width / MapDefine.ChunkSize);
+            ChunkCountY = Mathf.CeilToInt((float)Height / MapDefine.ChunkSize);
+
+            _chunks = new ChunkData[FloorCount, ChunkCountY, ChunkCountX];
+
+            // 创建所有Chunk
+            for (int floor = 0; floor < FloorCount; floor++)
+            {
+                for (int cy = 0; cy < ChunkCountY; cy++)
+                {
+                    for (int cx = 0; cx < ChunkCountX; cx++)
+                    {
+                        _chunks[floor, cy, cx] = new ChunkData(cx, cy, floor);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Chunk访问
+
+        /// <summary>
+        /// 获取Chunk
+        /// </summary>
         public ChunkData GetChunk(int chunkX, int chunkY, int floor)
         {
             if (!IsValidChunkPos(chunkX, chunkY, floor))
                 return null;
 
-            return Chunks[floor, chunkY, chunkX];
+            return _chunks[floor, chunkY, chunkX];
         }
 
         /// <summary>
-        /// 设置 Chunk
+        /// 根据世界坐标获取Chunk
         /// </summary>
-        public void SetChunk(int chunkX, int chunkY, int floor, ChunkData chunkData)
+        public ChunkData GetChunkByWorld(int worldX, int worldY, int floor)
         {
-            if (!IsValidChunkPos(chunkX, chunkY, floor))
-                return;
-
-            Chunks[floor, chunkY, chunkX] = chunkData;
+            int chunkX = worldX / MapDefine.ChunkSize;
+            int chunkY = worldY / MapDefine.ChunkSize;
+            return GetChunk(chunkX, chunkY, floor);
         }
 
         /// <summary>
-        /// 创建并设置 Chunk
-        /// </summary>
-        public ChunkData CreateChunk(int chunkX, int chunkY, int floor)
-        {
-            if (!IsValidChunkPos(chunkX, chunkY, floor))
-                return null;
-
-            var chunk = new ChunkData(chunkX, chunkY, floor);
-            Chunks[floor, chunkY, chunkX] = chunk;
-            return chunk;
-        }
-
-        /// <summary>
-        /// 检查 Chunk 坐标是否有效
+        /// 检查Chunk坐标是否有效
         /// </summary>
         public bool IsValidChunkPos(int chunkX, int chunkY, int floor)
         {
@@ -132,26 +149,54 @@ namespace Core.Game.Map.Data
                    floor >= 0 && floor < FloorCount;
         }
 
+        /// <summary>
+        /// 遍历所有Chunk
+        /// </summary>
+        public void ForEachChunk(Action<ChunkData> action)
+        {
+            for (int floor = 0; floor < FloorCount; floor++)
+            {
+                for (int cy = 0; cy < ChunkCountY; cy++)
+                {
+                    for (int cx = 0; cx < ChunkCountX; cx++)
+                    {
+                        action(_chunks[floor, cy, cx]);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 遍历指定楼层的Chunk
+        /// </summary>
+        public void ForEachChunkInFloor(int floor, Action<ChunkData> action)
+        {
+            if (floor < 0 || floor >= FloorCount)
+                return;
+
+            for (int cy = 0; cy < ChunkCountY; cy++)
+            {
+                for (int cx = 0; cx < ChunkCountX; cx++)
+                {
+                    action(_chunks[floor, cy, cx]);
+                }
+            }
+        }
+
         #endregion
 
-        #region Cell 操作
+        #region 格子访问
 
         /// <summary>
         /// 获取格子
         /// </summary>
-        /// <param name="x">世界 X 坐标</param>
-        /// <param name="y">世界 Y 坐标</param>
-        /// <param name="floor">楼层</param>
         public CellData GetCell(int x, int y, int floor)
         {
             if (!IsValidCellPos(x, y, floor))
                 return null;
 
-            int chunkX = x / MapDefine.ChunkWidth;
-            int chunkY = y / MapDefine.ChunkHeight;
-
-            var chunk = GetChunk(chunkX, chunkY, floor);
-            return chunk?.GetCellByWorldPos(x, y);
+            var chunk = GetChunkByWorld(x, y, floor);
+            return chunk?.GetCellByWorld(x, y);
         }
 
         /// <summary>
@@ -165,69 +210,117 @@ namespace Core.Game.Map.Data
         }
 
         /// <summary>
-        /// 世界坐标转 Chunk 索引
+        /// 标记格子所在Chunk为脏
         /// </summary>
-        public (int chunkX, int chunkY) WorldToChunkIndex(int worldX, int worldY)
+        public void MarkCellDirty(int x, int y, int floor)
         {
-            int chunkX = worldX / MapDefine.ChunkWidth;
-            int chunkY = worldY / MapDefine.ChunkHeight;
-            return (chunkX, chunkY);
+            var chunk = GetChunkByWorld(x, y, floor);
+            chunk?.MarkDirty();
         }
 
         /// <summary>
-        /// 世界坐标转 Chunk 内局部坐标
+        /// 世界坐标转Chunk坐标
         /// </summary>
-        public (int localX, int localY) WorldToLocalPos(int worldX, int worldY)
+        public Vector2Int WorldToChunkPos(int worldX, int worldY)
         {
-            int localX = worldX % MapDefine.ChunkWidth;
-            int localY = worldY % MapDefine.ChunkHeight;
-            return (localX, localY);
+            return new Vector2Int(
+                worldX / MapDefine.ChunkSize,
+                worldY / MapDefine.ChunkSize
+            );
         }
 
         #endregion
 
-        #region 遍历
+        #region 房间数据
 
         /// <summary>
-        /// 遍历所有 Chunk
+        /// 设置楼层的房间数据
         /// </summary>
-        public void ForeachChunk(Action<ChunkData, int, int, int> action)
+        public void SetFloorRoomData(int floor, FloorRoomData roomData)
         {
-            for (int floor = 0; floor < FloorCount; floor++)
-            {
-                for (int cy = 0; cy < ChunkCountY; cy++)
-                {
-                    for (int cx = 0; cx < ChunkCountX; cx++)
-                    {
-                        var chunk = Chunks[floor, cy, cx];
-                        if (chunk != null)
-                        {
-                            action?.Invoke(chunk, cx, cy, floor);
-                        }
-                    }
-                }
-            }
+            _floorRoomData ??= new Dictionary<int, FloorRoomData>();
+            _floorRoomData[floor] = roomData;
         }
 
         /// <summary>
-        /// 遍历指定楼层的所有 Chunk
+        /// 获取楼层的房间数据
         /// </summary>
-        public void ForeachChunkInFloor(int floor, Action<ChunkData, int, int> action)
+        public FloorRoomData GetFloorRoomData(int floor)
         {
-            if (floor < 0 || floor >= FloorCount)
-                return;
+            if (_floorRoomData == null)
+                return null;
 
-            for (int cy = 0; cy < ChunkCountY; cy++)
+            return _floorRoomData.TryGetValue(floor, out var data) ? data : null;
+        }
+
+        /// <summary>
+        /// 获取指定房间
+        /// </summary>
+        public RoomData GetRoom(int roomId, int floor)
+        {
+            return GetFloorRoomData(floor)?.GetRoom(roomId);
+        }
+
+        /// <summary>
+        /// 获取格子所属的房间ID
+        /// </summary>
+        public int GetRoomId(int x, int y, int floor)
+        {
+            var cell = GetCell(x, y, floor);
+            return cell?.RoomId ?? -1;
+        }
+
+        #endregion
+
+        #region 工具方法
+
+        /// <summary>
+        /// 获取所有脏Chunk
+        /// </summary>
+        public List<ChunkData> GetDirtyChunks()
+        {
+            var dirtyChunks = new List<ChunkData>();
+
+            ForEachChunk(chunk =>
             {
-                for (int cx = 0; cx < ChunkCountX; cx++)
+                if (chunk.IsDirty)
                 {
-                    var chunk = Chunks[floor, cy, cx];
-                    if (chunk != null)
-                    {
-                        action?.Invoke(chunk, cx, cy);
-                    }
+                    dirtyChunks.Add(chunk);
                 }
-            }
+            });
+
+            return dirtyChunks;
+        }
+
+        /// <summary>
+        /// 获取指定楼层的所有脏Chunk
+        /// </summary>
+        public List<ChunkData> GetDirtyChunksInFloor(int floor)
+        {
+            var dirtyChunks = new List<ChunkData>();
+
+            ForEachChunkInFloor(floor, chunk =>
+            {
+                if (chunk.IsDirty)
+                {
+                    dirtyChunks.Add(chunk);
+                }
+            });
+
+            return dirtyChunks;
+        }
+
+        /// <summary>
+        /// 清除所有脏标记
+        /// </summary>
+        public void ClearAllDirty()
+        {
+            ForEachChunk(chunk => chunk.ClearDirty());
+        }
+
+        public override string ToString()
+        {
+            return $"Map({MapName}, {Width}x{Height}, {FloorCount} floors, {ChunkCountX}x{ChunkCountY} chunks)";
         }
 
         #endregion

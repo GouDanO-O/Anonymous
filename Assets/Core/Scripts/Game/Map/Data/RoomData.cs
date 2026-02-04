@@ -6,15 +6,14 @@ namespace Core.Game.Map.Data
 {
     /// <summary>
     /// 房间数据
-    /// 表示一个被墙壁包围的封闭空间
     /// </summary>
     [Serializable]
     public class RoomData
     {
-        #region 基础信息
+        #region 基础属性
 
         /// <summary>
-        /// 房间唯一 ID
+        /// 房间ID
         /// </summary>
         public int RoomId;
 
@@ -24,13 +23,13 @@ namespace Core.Game.Map.Data
         public int Floor;
 
         /// <summary>
-        /// 房间名称（可选）
+        /// 房间名称
         /// </summary>
-        public string RoomName;
+        public string Name;
 
         #endregion
 
-        #region 范围数据
+        #region 格子数据
 
         /// <summary>
         /// 房间包含的所有格子坐标
@@ -38,28 +37,28 @@ namespace Core.Game.Map.Data
         public List<Vector2Int> Cells;
 
         /// <summary>
-        /// 房间边界（最小 X）
+        /// 房间边界的最小X
         /// </summary>
-        public int MinX;
+        public int MinX { get; private set; }
 
         /// <summary>
-        /// 房间边界（最大 X）
+        /// 房间边界的最大X
         /// </summary>
-        public int MaxX;
+        public int MaxX { get; private set; }
 
         /// <summary>
-        /// 房间边界（最小 Y）
+        /// 房间边界的最小Y
         /// </summary>
-        public int MinY;
+        public int MinY { get; private set; }
 
         /// <summary>
-        /// 房间边界（最大 Y）
+        /// 房间边界的最大Y
         /// </summary>
-        public int MaxY;
+        public int MaxY { get; private set; }
 
         #endregion
 
-        #region 属性
+        #region 属性访问器
 
         /// <summary>
         /// 房间面积（格子数）
@@ -77,7 +76,7 @@ namespace Core.Game.Map.Data
         public int Height => MaxY - MinY + 1;
 
         /// <summary>
-        /// 房间中心点
+        /// 房间中心坐标
         /// </summary>
         public Vector2 Center => new Vector2((MinX + MaxX) / 2f, (MinY + MaxY) / 2f);
 
@@ -88,7 +87,10 @@ namespace Core.Game.Map.Data
         public RoomData()
         {
             Cells = new List<Vector2Int>();
-            RoomId = -1;
+            MinX = int.MaxValue;
+            MaxX = int.MinValue;
+            MinY = int.MaxValue;
+            MaxY = int.MinValue;
         }
 
         public RoomData(int roomId, int floor) : this()
@@ -102,87 +104,108 @@ namespace Core.Game.Map.Data
         #region 方法
 
         /// <summary>
-        /// 添加格子到房间
+        /// 添加格子
         /// </summary>
-        public void AddCell(int x, int y)
+        public void AddCell(Vector2Int pos)
         {
-            var pos = new Vector2Int(x, y);
+            Cells ??= new List<Vector2Int>();
+
             if (!Cells.Contains(pos))
             {
                 Cells.Add(pos);
-                UpdateBounds(x, y);
+                UpdateBounds(pos);
             }
         }
 
         /// <summary>
-        /// 添加格子到房间
+        /// 添加格子
         /// </summary>
-        public void AddCell(Vector2Int pos)
+        public void AddCell(int x, int y)
         {
-            AddCell(pos.x, pos.y);
+            AddCell(new Vector2Int(x, y));
         }
 
         /// <summary>
-        /// 检查格子是否在房间内
+        /// 移除格子
         /// </summary>
-        public bool ContainsCell(int x, int y)
+        public bool RemoveCell(Vector2Int pos)
         {
-            return Cells.Contains(new Vector2Int(x, y));
+            bool removed = Cells?.Remove(pos) ?? false;
+            if (removed)
+            {
+                RecalculateBounds();
+            }
+            return removed;
         }
 
         /// <summary>
-        /// 检查格子是否在房间内
+        /// 检查坐标是否在房间内
         /// </summary>
         public bool ContainsCell(Vector2Int pos)
         {
-            return Cells.Contains(pos);
+            return Cells?.Contains(pos) ?? false;
+        }
+
+        /// <summary>
+        /// 检查坐标是否在房间内
+        /// </summary>
+        public bool ContainsCell(int x, int y)
+        {
+            return ContainsCell(new Vector2Int(x, y));
+        }
+
+        /// <summary>
+        /// 清空房间
+        /// </summary>
+        public void Clear()
+        {
+            Cells?.Clear();
+            MinX = int.MaxValue;
+            MaxX = int.MinValue;
+            MinY = int.MaxValue;
+            MaxY = int.MinValue;
         }
 
         /// <summary>
         /// 更新边界
         /// </summary>
-        private void UpdateBounds(int x, int y)
+        private void UpdateBounds(Vector2Int pos)
         {
-            if (Cells.Count == 1)
-            {
-                MinX = MaxX = x;
-                MinY = MaxY = y;
-            }
-            else
-            {
-                MinX = Mathf.Min(MinX, x);
-                MaxX = Mathf.Max(MaxX, x);
-                MinY = Mathf.Min(MinY, y);
-                MaxY = Mathf.Max(MaxY, y);
-            }
+            MinX = Math.Min(MinX, pos.x);
+            MaxX = Math.Max(MaxX, pos.x);
+            MinY = Math.Min(MinY, pos.y);
+            MaxY = Math.Max(MaxY, pos.y);
         }
 
         /// <summary>
         /// 重新计算边界
         /// </summary>
-        public void RecalculateBounds()
+        private void RecalculateBounds()
         {
-            if (Cells == null || Cells.Count == 0)
-                return;
+            MinX = int.MaxValue;
+            MaxX = int.MinValue;
+            MinY = int.MaxValue;
+            MaxY = int.MinValue;
 
-            MinX = MinY = int.MaxValue;
-            MaxX = MaxY = int.MinValue;
-
-            foreach (var cell in Cells)
+            if (Cells != null)
             {
-                MinX = Mathf.Min(MinX, cell.x);
-                MaxX = Mathf.Max(MaxX, cell.x);
-                MinY = Mathf.Min(MinY, cell.y);
-                MaxY = Mathf.Max(MaxY, cell.y);
+                foreach (var pos in Cells)
+                {
+                    UpdateBounds(pos);
+                }
             }
+        }
+
+        public override string ToString()
+        {
+            return $"Room({RoomId}, Floor={Floor}, Area={Area})";
         }
 
         #endregion
     }
 
     /// <summary>
-    /// 楼层房间数据
-    /// 管理单层楼的所有房间
+    /// 单层楼的房间数据集合
     /// </summary>
     [Serializable]
     public class FloorRoomData
@@ -193,20 +216,20 @@ namespace Core.Game.Map.Data
         public int Floor;
 
         /// <summary>
-        /// 该楼层的所有房间
+        /// 房间列表
         /// </summary>
         public List<RoomData> Rooms;
 
         /// <summary>
-        /// 格子到房间ID的映射（快速查找）
+        /// 房间ID到房间数据的映射
         /// </summary>
         [NonSerialized]
-        public Dictionary<Vector2Int, int> CellToRoomMap;
+        private Dictionary<int, RoomData> _roomMap;
 
         public FloorRoomData()
         {
             Rooms = new List<RoomData>();
-            CellToRoomMap = new Dictionary<Vector2Int, int>();
+            _roomMap = new Dictionary<int, RoomData>();
         }
 
         public FloorRoomData(int floor) : this()
@@ -219,50 +242,59 @@ namespace Core.Game.Map.Data
         /// </summary>
         public void AddRoom(RoomData room)
         {
-            Rooms.Add(room);
+            if (room == null) return;
 
-            // 更新映射
-            foreach (var cell in room.Cells)
+            Rooms ??= new List<RoomData>();
+            _roomMap ??= new Dictionary<int, RoomData>();
+
+            if (!_roomMap.ContainsKey(room.RoomId))
             {
-                CellToRoomMap[cell] = room.RoomId;
+                Rooms.Add(room);
+                _roomMap[room.RoomId] = room;
             }
         }
 
         /// <summary>
-        /// 获取格子所属的房间ID
+        /// 获取房间
         /// </summary>
-        /// <returns>房间ID，如果不在任何房间内则返回 -1</returns>
-        public int GetRoomId(int x, int y)
+        public RoomData GetRoom(int roomId)
         {
-            var pos = new Vector2Int(x, y);
-            return CellToRoomMap.TryGetValue(pos, out int roomId) ? roomId : -1;
-        }
+            _roomMap ??= new Dictionary<int, RoomData>();
 
-        /// <summary>
-        /// 获取格子所属的房间
-        /// </summary>
-        public RoomData GetRoom(int x, int y)
-        {
-            int roomId = GetRoomId(x, y);
-            if (roomId < 0)
-                return null;
-
-            return Rooms.Find(r => r.RoomId == roomId);
-        }
-
-        /// <summary>
-        /// 重建映射
-        /// </summary>
-        public void RebuildCellToRoomMap()
-        {
-            CellToRoomMap.Clear();
-            foreach (var room in Rooms)
+            // 如果映射表为空，重建
+            if (_roomMap.Count == 0 && Rooms != null && Rooms.Count > 0)
             {
-                foreach (var cell in room.Cells)
+                foreach (var room in Rooms)
                 {
-                    CellToRoomMap[cell] = room.RoomId;
+                    _roomMap[room.RoomId] = room;
                 }
             }
+
+            return _roomMap.TryGetValue(roomId, out var result) ? result : null;
+        }
+
+        /// <summary>
+        /// 移除房间
+        /// </summary>
+        public bool RemoveRoom(int roomId)
+        {
+            var room = GetRoom(roomId);
+            if (room != null)
+            {
+                Rooms?.Remove(room);
+                _roomMap?.Remove(roomId);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 清空所有房间
+        /// </summary>
+        public void Clear()
+        {
+            Rooms?.Clear();
+            _roomMap?.Clear();
         }
     }
 }

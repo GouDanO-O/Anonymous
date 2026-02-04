@@ -7,8 +7,8 @@ using UnityEngine;
 namespace Core.Game.Map.View
 {
     /// <summary>
-    /// Chunk Mesh 构建器
-    /// 将 Chunk 数据转换为可渲染的 Mesh
+    /// Chunk Mesh构建器
+    /// 将Chunk数据转换为可渲染的Mesh
     /// </summary>
     public class ChunkMeshBuilder
     {
@@ -29,133 +29,121 @@ namespace Core.Game.Map.View
         private static readonly Color ColorSand = new Color(0.9f, 0.8f, 0.5f, 1f);
         private static readonly Color ColorStone = new Color(0.5f, 0.5f, 0.5f, 1f);
         private static readonly Color ColorWater = new Color(0.2f, 0.4f, 0.8f, 0.8f);
+        private static readonly Color ColorSnow = new Color(0.95f, 0.95f, 0.95f, 1f);
+        private static readonly Color ColorSwamp = new Color(0.3f, 0.4f, 0.2f, 1f);
 
         // 地板颜色
         private static readonly Color ColorWoodFloor = new Color(0.7f, 0.5f, 0.3f, 1f);
         private static readonly Color ColorTileFloor = new Color(0.8f, 0.8f, 0.8f, 1f);
         private static readonly Color ColorConcreteFloor = new Color(0.6f, 0.6f, 0.6f, 1f);
         private static readonly Color ColorCarpetFloor = new Color(0.5f, 0.2f, 0.2f, 1f);
+        private static readonly Color ColorMetalFloor = new Color(0.7f, 0.7f, 0.75f, 1f);
+        private static readonly Color ColorStoneSlabFloor = new Color(0.55f, 0.55f, 0.5f, 1f);
 
         // 墙体颜色
-        private static readonly Color ColorWallNorth = new Color(0.2f, 0.4f, 0.8f, 1f); // 蓝色
-        private static readonly Color ColorWallWest = new Color(0.8f, 0.2f, 0.2f, 1f); // 红色
-        private static readonly Color ColorWallDoor = new Color(0.6f, 0.4f, 0.2f, 1f); // 棕色（门）
+        private static readonly Color ColorWallWood = new Color(0.6f, 0.45f, 0.3f, 1f);
+        private static readonly Color ColorWallStone = new Color(0.5f, 0.5f, 0.5f, 1f);
+        private static readonly Color ColorWallBrick = new Color(0.7f, 0.35f, 0.25f, 1f);
+        private static readonly Color ColorWallMetal = new Color(0.6f, 0.6f, 0.65f, 1f);
+        private static readonly Color ColorWallGlass = new Color(0.7f, 0.85f, 0.9f, 0.6f);
+        private static readonly Color ColorWallDoor = new Color(0.5f, 0.35f, 0.2f, 1f);
 
         // 屋顶颜色
-        private static readonly Color ColorRoof = new Color(0.4f, 0.3f, 0.25f, 1f); // 深棕色
-        private static readonly Color ColorRoofEdge = new Color(0.3f, 0.2f, 0.15f, 1f); // 更深的边缘色
+        private static readonly Color ColorRoof = new Color(0.4f, 0.3f, 0.25f, 1f);
 
         #endregion
 
+        #region 公共方法
+
         /// <summary>
-        /// 构建地面层 Mesh
+        /// 构建地面层Mesh
         /// </summary>
         public Mesh BuildGroundMesh(ChunkData chunk)
         {
             ClearBuffers();
 
-            for (int ly = 0; ly < MapDefine.ChunkHeight; ly++)
+            chunk.ForEachCell((cell, lx, ly) =>
             {
-                for (int lx = 0; lx < MapDefine.ChunkWidth; lx++)
-                {
-                    var cell = chunk.GetCell(lx, ly);
-                    if (cell == null || cell.GroundType == EGroundType.None)
-                        continue;
+                if (cell.GroundType == EGroundType.None)
+                    return;
 
-                    Color color = GetGroundColor(cell.GroundType);
-                    AddTileQuad(cell.X, cell.Y, chunk.Floor, color);
-                }
-            }
+                Color color = GetGroundColor(cell.GroundType);
+                AddTileQuad(cell.X, cell.Y, chunk.Floor, color, MapDefine.DepthOffsetGround);
+            });
 
             return CreateMesh("Ground");
         }
 
         /// <summary>
-        /// 构建地板层 Mesh
+        /// 构建地板层Mesh
         /// </summary>
         public Mesh BuildFloorMesh(ChunkData chunk)
         {
             ClearBuffers();
 
-            for (int ly = 0; ly < MapDefine.ChunkHeight; ly++)
+            chunk.ForEachCell((cell, lx, ly) =>
             {
-                for (int lx = 0; lx < MapDefine.ChunkWidth; lx++)
-                {
-                    var cell = chunk.GetCell(lx, ly);
-                    if (cell == null || cell.FloorType == EFloorType.None)
-                        continue;
+                if (cell.FloorType == EFloorType.None)
+                    return;
 
-                    Color color = GetFloorColor(cell.FloorType);
-                    // 地板略微抬高，避免 Z-fighting
-                    AddTileQuad(cell.X, cell.Y, chunk.Floor, color, 0.001f);
-                }
-            }
+                Color color = GetFloorColor(cell.FloorType);
+                // 地板略微抬高，避免Z-fighting
+                AddTileQuad(cell.X, cell.Y, chunk.Floor, color, MapDefine.DepthOffsetFloor, 0.001f);
+            });
 
             return CreateMesh("Floor");
         }
 
         /// <summary>
-        /// 构建墙体层 Mesh
+        /// 构建墙体层Mesh
         /// </summary>
         public Mesh BuildWallMesh(ChunkData chunk)
         {
             ClearBuffers();
 
-            for (int ly = 0; ly < MapDefine.ChunkHeight; ly++)
+            chunk.ForEachCell((cell, lx, ly) =>
             {
-                for (int lx = 0; lx < MapDefine.ChunkWidth; lx++)
+                // 北墙
+                if (cell.HasWallNorth)
                 {
-                    var cell = chunk.GetCell(lx, ly);
-                    if (cell == null)
-                        continue;
-
-                    // 北墙
-                    if (cell.HasWallNorth)
-                    {
-                        Color color = cell.WallNorth.HasDoor ? ColorWallDoor : ColorWallNorth;
-                        AddNorthWallQuad(cell.X, cell.Y, chunk.Floor, color);
-                    }
-
-                    // 西墙
-                    if (cell.HasWallWest)
-                    {
-                        Color color = cell.WallWest.HasDoor ? ColorWallDoor : ColorWallWest;
-                        AddWestWallQuad(cell.X, cell.Y, chunk.Floor, color);
-                    }
+                    Color color = GetWallColor(cell.WallNorth);
+                    AddNorthWallQuad(cell.X, cell.Y, chunk.Floor, color);
                 }
-            }
+
+                // 西墙
+                if (cell.HasWallWest)
+                {
+                    Color color = GetWallColor(cell.WallWest);
+                    AddWestWallQuad(cell.X, cell.Y, chunk.Floor, color);
+                }
+            });
 
             return CreateMesh("Wall");
         }
 
         /// <summary>
-        /// 构建屋顶层 Mesh
+        /// 构建屋顶层Mesh
         /// </summary>
         public Mesh BuildRoofMesh(ChunkData chunk)
         {
             ClearBuffers();
 
-            for (int ly = 0; ly < MapDefine.ChunkHeight; ly++)
+            chunk.ForEachCell((cell, lx, ly) =>
             {
-                for (int lx = 0; lx < MapDefine.ChunkWidth; lx++)
-                {
-                    var cell = chunk.GetCell(lx, ly);
-                    if (cell == null)
-                        continue;
+                // 只渲染有屋顶标记的格子
+                if (!cell.HasFlag(ECellFlags.HasRoof))
+                    return;
 
-                    // 只渲染有屋顶标记的格子
-                    if (!cell.HasFlag(ECellFlags.HasRoof))
-                        continue;
-
-                    // 屋顶位于墙顶部
-                    AddRoofQuad(cell.X, cell.Y, chunk.Floor, ColorRoof);
-                }
-            }
+                // 屋顶位于墙顶部
+                AddRoofQuad(cell.X, cell.Y, chunk.Floor, ColorRoof);
+            });
 
             return CreateMesh("Roof");
         }
 
-        #region 私有方法
+        #endregion
+
+        #region 私有方法 - 缓存管理
 
         private void ClearBuffers()
         {
@@ -182,10 +170,14 @@ namespace Core.Game.Map.View
             return mesh;
         }
 
+        #endregion
+
+        #region 私有方法 - 几何构建
+
         /// <summary>
-        /// 添加一个菱形 Tile 的四边形
+        /// 添加一个菱形Tile的四边形
         /// </summary>
-        private void AddTileQuad(int cellX, int cellY, int floor, Color color, float heightOffset = 0f)
+        private void AddTileQuad(int cellX, int cellY, int floor, Color color, float depthOffset, float heightOffset = 0f)
         {
             Vector3 center = IsometricUtility.CellCenterToScreen(cellX, cellY, floor);
             center.y += heightOffset;
@@ -199,8 +191,8 @@ namespace Core.Game.Map.View
             Vector3 right = center + new Vector3(halfW, 0, 0);
             Vector3 bottom = center + new Vector3(0, -halfH, 0);
 
-            // 计算深度（Z 坐标）
-            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, 0);
+            // 计算深度（Z坐标）
+            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, depthOffset);
             left.z = depth;
             top.z = depth;
             right.z = depth;
@@ -252,7 +244,7 @@ namespace Core.Game.Map.View
             Vector3 topRight = bottomRight + new Vector3(0, wallH, 0);
 
             // 深度（墙比地面深度大一点）
-            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, 2);
+            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, MapDefine.DepthOffsetWall);
             bottomLeft.z = depth;
             bottomRight.z = depth;
             topLeft.z = depth;
@@ -278,7 +270,7 @@ namespace Core.Game.Map.View
             Vector3 topRight = bottomRight + new Vector3(0, wallH, 0);
 
             // 深度
-            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, 2);
+            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, MapDefine.DepthOffsetWall + 0.01f);
             bottomLeft.z = depth;
             bottomRight.z = depth;
             topLeft.z = depth;
@@ -289,7 +281,6 @@ namespace Core.Game.Map.View
 
         /// <summary>
         /// 添加屋顶四边形
-        /// 屋顶位于墙体顶部，是一个菱形
         /// </summary>
         private void AddRoofQuad(int cellX, int cellY, int floor, Color color)
         {
@@ -307,7 +298,7 @@ namespace Core.Game.Map.View
             Vector3 bottom = center + new Vector3(0, -halfH, 0);
 
             // 深度（屋顶在最上层）
-            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, 4);
+            float depth = IsometricUtility.CalculateDepth(cellX, cellY, floor, MapDefine.DepthOffsetRoof);
             left.z = depth;
             top.z = depth;
             right.z = depth;
@@ -373,6 +364,10 @@ namespace Core.Game.Map.View
             _colors.Add(color);
         }
 
+        #endregion
+
+        #region 私有方法 - 颜色获取
+
         private Color GetGroundColor(EGroundType groundType)
         {
             return groundType switch
@@ -382,6 +377,8 @@ namespace Core.Game.Map.View
                 EGroundType.Sand => ColorSand,
                 EGroundType.Stone => ColorStone,
                 EGroundType.Water => ColorWater,
+                EGroundType.Snow => ColorSnow,
+                EGroundType.Swamp => ColorSwamp,
                 _ => Color.magenta
             };
         }
@@ -394,6 +391,24 @@ namespace Core.Game.Map.View
                 EFloorType.Tile => ColorTileFloor,
                 EFloorType.Concrete => ColorConcreteFloor,
                 EFloorType.Carpet => ColorCarpetFloor,
+                EFloorType.Metal => ColorMetalFloor,
+                EFloorType.StoneSlab => ColorStoneSlabFloor,
+                _ => Color.magenta
+            };
+        }
+
+        private Color GetWallColor(WallData wall)
+        {
+            if (wall.HasDoor)
+                return ColorWallDoor;
+
+            return wall.WallType switch
+            {
+                EWallType.Wood => ColorWallWood,
+                EWallType.Stone => ColorWallStone,
+                EWallType.Brick => ColorWallBrick,
+                EWallType.Metal => ColorWallMetal,
+                EWallType.Glass => ColorWallGlass,
                 _ => Color.magenta
             };
         }

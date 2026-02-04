@@ -2,13 +2,14 @@ using System;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using GDFrameworkCore;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Core.Game.Map.Model
 {
     /// <summary>
     /// 地图数据模型
-    /// 管理当前地图的所有数据
+    /// 管理地图数据和状态
     /// </summary>
     public class MapDataModel : AbstractModel
     {
@@ -20,14 +21,43 @@ namespace Core.Game.Map.Model
         public MapData CurrentMap { get; private set; }
 
         /// <summary>
-        /// 当前显示的楼层
+        /// 当前楼层
         /// </summary>
         public int CurrentFloor { get; private set; }
+
+        #endregion
+
+        #region 属性
 
         /// <summary>
         /// 是否已加载地图
         /// </summary>
         public bool IsMapLoaded => CurrentMap != null;
+
+        /// <summary>
+        /// 地图宽度
+        /// </summary>
+        public int MapWidth => CurrentMap?.Width ?? 0;
+
+        /// <summary>
+        /// 地图高度
+        /// </summary>
+        public int MapHeight => CurrentMap?.Height ?? 0;
+
+        /// <summary>
+        /// 楼层数
+        /// </summary>
+        public int FloorCount => CurrentMap?.FloorCount ?? 0;
+
+        /// <summary>
+        /// Chunk列数
+        /// </summary>
+        public int ChunkCountX => CurrentMap?.ChunkCountX ?? 0;
+
+        /// <summary>
+        /// Chunk行数
+        /// </summary>
+        public int ChunkCountY => CurrentMap?.ChunkCountY ?? 0;
 
         #endregion
 
@@ -44,44 +74,59 @@ namespace Core.Game.Map.Model
         public UnityAction OnMapUnloaded;
 
         /// <summary>
-        /// 楼层切换事件
+        /// 楼层切换事件 (oldFloor, newFloor)
         /// </summary>
         public UnityAction<int, int> OnFloorChanged;
 
         /// <summary>
-        /// 格子数据变更事件
+        /// Chunk数据变化事件 (chunkX, chunkY, floor)
+        /// </summary>
+        public UnityAction<int, int, int> OnChunkDirty;
+
+        /// <summary>
+        /// 格子数据变化事件 (x, y, floor)
         /// </summary>
         public UnityAction<int, int, int> OnCellChanged;
 
-        /// <summary>
-        /// Chunk 数据变更事件
-        /// </summary>
-        public UnityAction<int, int, int> OnChunkChanged;
-
         #endregion
+
+        #region 初始化
 
         protected override void OnInit()
         {
             CurrentFloor = 0;
         }
 
-        #region 地图操作
+        #endregion
+
+        #region 地图加载/卸载
 
         /// <summary>
-        /// 加载地图数据
+        /// 加载地图
         /// </summary>
         public void LoadMap(MapData mapData)
         {
             if (mapData == null)
+            {
+                Debug.LogError("[MapDataModel] LoadMap failed: mapData is null");
                 return;
+            }
+
+            // 如果已有地图，先卸载
+            if (CurrentMap != null)
+            {
+                UnloadMap();
+            }
 
             CurrentMap = mapData;
             CurrentFloor = 0;
+
+            Debug.Log($"[MapDataModel] Map loaded: {mapData}");
             OnMapLoaded?.Invoke(mapData);
         }
 
         /// <summary>
-        /// 卸载当前地图
+        /// 卸载地图
         /// </summary>
         public void UnloadMap()
         {
@@ -90,37 +135,32 @@ namespace Core.Game.Map.Model
 
             CurrentMap = null;
             CurrentFloor = 0;
-            OnMapUnloaded?.Invoke();
-        }
 
-        /// <summary>
-        /// 创建新地图
-        /// </summary>
-        public MapData CreateNewMap(string mapName, int width, int height, int floorCount, int seed = 0)
-        {
-            var mapData = new MapData(mapName, width, height, floorCount, seed);
-            return mapData;
+            Debug.Log("[MapDataModel] Map unloaded");
+            OnMapUnloaded?.Invoke();
         }
 
         #endregion
 
-        #region 楼层操作
+        #region 楼层控制
 
         /// <summary>
-        /// 切换楼层
+        /// 设置当前楼层
         /// </summary>
         public void SetCurrentFloor(int floor)
         {
             if (CurrentMap == null)
                 return;
 
-            floor = Math.Clamp(floor, 0, CurrentMap.FloorCount - 1);
+            floor = Mathf.Clamp(floor, 0, FloorCount - 1);
 
             if (floor == CurrentFloor)
                 return;
 
             int oldFloor = CurrentFloor;
             CurrentFloor = floor;
+
+            Debug.Log($"[MapDataModel] Floor changed: {oldFloor} -> {CurrentFloor}");
             OnFloorChanged?.Invoke(oldFloor, CurrentFloor);
         }
 
@@ -142,7 +182,7 @@ namespace Core.Game.Map.Model
 
         #endregion
 
-        #region 格子操作
+        #region 数据访问
 
         /// <summary>
         /// 获取格子
@@ -159,64 +199,7 @@ namespace Core.Game.Map.Model
         }
 
         /// <summary>
-        /// 设置格子地面类型
-        /// </summary>
-        public void SetCellGround(int x, int y, int floor, EGroundType groundType)
-        {
-            var cell = GetCell(x, y, floor);
-            if (cell == null)
-                return;
-
-            cell.GroundType = groundType;
-            NotifyCellChanged(x, y, floor);
-        }
-
-        /// <summary>
-        /// 设置格子地板类型
-        /// </summary>
-        public void SetCellFloor(int x, int y, int floor, EFloorType floorType)
-        {
-            var cell = GetCell(x, y, floor);
-            if (cell == null)
-                return;
-
-            cell.FloorType = floorType;
-            NotifyCellChanged(x, y, floor);
-        }
-
-        /// <summary>
-        /// 设置墙体
-        /// </summary>
-        public void SetWall(int x, int y, int floor, EWallDirection direction, WallData wallData)
-        {
-            var cell = GetCell(x, y, floor);
-            if (cell == null)
-                return;
-
-            cell.SetWall(direction, wallData);
-            NotifyCellChanged(x, y, floor);
-        }
-
-        /// <summary>
-        /// 通知格子变更
-        /// </summary>
-        private void NotifyCellChanged(int x, int y, int floor)
-        {
-            OnCellChanged?.Invoke(x, y, floor);
-
-            // 同时通知对应的 Chunk
-            var chunkIndex = CurrentMap.WorldToChunkIndex(x, y);
-            var chunk = CurrentMap.GetChunk(chunkIndex.chunkX, chunkIndex.chunkY, floor);
-            chunk?.MarkDirty();
-            OnChunkChanged?.Invoke(chunkIndex.chunkX, chunkIndex.chunkY, floor);
-        }
-
-        #endregion
-
-        #region Chunk 操作
-
-        /// <summary>
-        /// 获取 Chunk
+        /// 获取Chunk
         /// </summary>
         public ChunkData GetChunk(int chunkX, int chunkY, int floor = -1)
         {
@@ -230,23 +213,51 @@ namespace Core.Game.Map.Model
         }
 
         /// <summary>
-        /// 标记 Chunk 需要更新
+        /// 根据世界坐标获取Chunk
         /// </summary>
-        public void MarkChunkDirty(int chunkX, int chunkY, int floor)
+        public ChunkData GetChunkByWorld(int worldX, int worldY, int floor = -1)
         {
-            var chunk = GetChunk(chunkX, chunkY, floor);
-            chunk?.MarkDirty();
-            OnChunkChanged?.Invoke(chunkX, chunkY, floor);
+            if (CurrentMap == null)
+                return null;
+
+            if (floor < 0)
+                floor = CurrentFloor;
+
+            return CurrentMap.GetChunkByWorld(worldX, worldY, floor);
         }
 
-        #endregion
+        /// <summary>
+        /// 获取房间ID
+        /// </summary>
+        public int GetRoomId(int x, int y, int floor = -1)
+        {
+            if (CurrentMap == null)
+                return -1;
 
-        #region 查询
+            if (floor < 0)
+                floor = CurrentFloor;
+
+            return CurrentMap.GetRoomId(x, y, floor);
+        }
+
+        /// <summary>
+        /// 获取房间数据
+        /// </summary>
+        public RoomData GetRoom(int roomId, int floor = -1)
+        {
+            if (CurrentMap == null)
+                return null;
+
+            if (floor < 0)
+                floor = CurrentFloor;
+
+            return CurrentMap.GetRoom(roomId, floor);
+        }
 
         /// <summary>
         /// 检查坐标是否有效
         /// </summary>
-        public bool IsValidPosition(int x, int y, int floor = -1)
+        public bool IsValidCellPos(int x, int y, int floor = -1)
         {
             if (CurrentMap == null)
                 return false;
@@ -257,13 +268,89 @@ namespace Core.Game.Map.Model
             return CurrentMap.IsValidCellPos(x, y, floor);
         }
 
+        #endregion
+
+        #region 数据修改
+
         /// <summary>
-        /// 检查格子是否可通行
+        /// 标记格子所在Chunk为脏
         /// </summary>
-        public bool IsCellWalkable(int x, int y, int floor = -1)
+        public void MarkCellDirty(int x, int y, int floor = -1)
+        {
+            if (CurrentMap == null)
+                return;
+
+            if (floor < 0)
+                floor = CurrentFloor;
+
+            CurrentMap.MarkCellDirty(x, y, floor);
+
+            var chunkPos = CurrentMap.WorldToChunkPos(x, y);
+            OnChunkDirty?.Invoke(chunkPos.x, chunkPos.y, floor);
+        }
+
+        /// <summary>
+        /// 通知格子数据变化
+        /// </summary>
+        public void NotifyCellChanged(int x, int y, int floor = -1)
+        {
+            if (floor < 0)
+                floor = CurrentFloor;
+
+            MarkCellDirty(x, y, floor);
+            OnCellChanged?.Invoke(x, y, floor);
+        }
+
+        /// <summary>
+        /// 设置格子地面类型
+        /// </summary>
+        public void SetGroundType(int x, int y, int floor, EGroundType groundType)
         {
             var cell = GetCell(x, y, floor);
-            return cell?.IsWalkable ?? false;
+            if (cell != null)
+            {
+                cell.GroundType = groundType;
+                NotifyCellChanged(x, y, floor);
+            }
+        }
+
+        /// <summary>
+        /// 设置格子地板类型
+        /// </summary>
+        public void SetFloorType(int x, int y, int floor, EFloorType floorType)
+        {
+            var cell = GetCell(x, y, floor);
+            if (cell != null)
+            {
+                cell.FloorType = floorType;
+                NotifyCellChanged(x, y, floor);
+            }
+        }
+
+        /// <summary>
+        /// 设置墙体
+        /// </summary>
+        public void SetWall(int x, int y, int floor, EWallDirection direction, WallData wallData)
+        {
+            var cell = GetCell(x, y, floor);
+            if (cell != null)
+            {
+                cell.SetWall(direction, wallData);
+                NotifyCellChanged(x, y, floor);
+            }
+        }
+
+        /// <summary>
+        /// 设置格子标记
+        /// </summary>
+        public void SetCellFlag(int x, int y, int floor, ECellFlags flag, bool value)
+        {
+            var cell = GetCell(x, y, floor);
+            if (cell != null)
+            {
+                cell.SetFlag(flag, value);
+                NotifyCellChanged(x, y, floor);
+            }
         }
 
         #endregion

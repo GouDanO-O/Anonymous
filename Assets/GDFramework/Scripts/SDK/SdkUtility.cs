@@ -79,11 +79,8 @@ namespace GDFramework.SDK
                 case EADType.FloatIcon:
                     ShowFloatIcon(adData.showAdDes);
                     break;
-                case EADType.InterstitialImg:
-                    ShowInterstitial_Img(adData.showAdDes);
-                    break;
-                case EADType.InterstitialVideo:
-                    ShowInterstitial_Video(adData.showAdDes, adData.successCallback, adData.failCallback);
+                case EADType.Interstitial:
+                    ShowInterstitial(adData.showAdDes);
                     break;
                 case EADType.RewardVideo:
                     ShowRewardVideo(adData.showAdDes, adData.successCallback, adData.failCallback);
@@ -218,7 +215,7 @@ namespace GDFramework.SDK
         /// 
         /// </summary>
         /// <param name="text"></param>
-        private void ShowInterstitial_Img(string text = "")
+        private void ShowInterstitial(string text = "")
         {
             if (!isLogin)
                 return;
@@ -229,28 +226,6 @@ namespace GDFramework.SDK
             CallAd("插屏广告"+text,"ShowInterstitial_Img");
 #else
             CallAd("插屏广告" + text, "ShowInterstitial_Img");
-#endif
-        }
-
-        /// <summary>
-        /// 插屏视频
-        /// </summary>
-        /// <param name="succ"></param>
-        /// <param name="fail"></param>
-        private void ShowInterstitial_Video(string text = "", Action succ = null, Action fail = null)
-        {
-            if (!isLogin)
-                return;
-#if KuaiShou
-#elif Vivo
-#elif UNITY_ANDROID
-            CallAd("插屏视频"+text,"ShowInterstitial_Video");
-            succCallBack = succ;
-            failCallBack = fail;
-#else
-            CallAd("插屏视频" + text, "ShowInterstitial_Video");
-            succCallBack = succ;
-            failCallBack = fail;
 #endif
         }
 

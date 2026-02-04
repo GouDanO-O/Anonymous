@@ -1,52 +1,126 @@
 using System.Collections.Generic;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
+using Core.Game.Map.Model;
+using Core.Game.Map.System;
+using GDFrameworkCore;
 using UnityEngine;
 
 namespace Core.Game.Map.View
 {
     /// <summary>
     /// 地图视图
-    /// 管理所有 ChunkRenderer 的创建和更新
+    /// 管理所有Chunk的渲染
     /// </summary>
     public class MapView : MonoBehaviour
     {
         #region 配置
 
-        [Header("渲染设置")]
-        [SerializeField] private Material _tileMaterial;
+        [Header("Camera")]
+        [SerializeField] private Camera _mainCamera;
 
-        [Header("调试")]
-        [SerializeField] private bool _showDebugInfo = true;
+        [Header("Debug")]
+        [SerializeField] private bool _showDebugInfo = false;
 
         #endregion
 
-        #region 运行时数据
+        #region 数据
 
         private MapData _mapData;
         private ChunkMeshBuilder _meshBuilder;
-        private Dictionary<(int, int, int), ChunkRenderer> _chunkRenderers;
-        private int _currentViewFloor;
+
+        /// <summary>
+        /// Chunk渲染器字典 [floor, chunkY, chunkX] -> ChunkRenderer
+        /// </summary>
+        private Dictionary<Vector3Int, ChunkRenderer> _chunkRenderers;
+
+        /// <summary>
+        /// 楼层容器对象
+        /// </summary>
+        private Dictionary<int, GameObject> _floorContainers;
+
+        // 系统引用
+        private MapSystem _mapSystem;
+        private MapDataModel _mapDataModel;
+        private ChunkCullingSystem _cullingSystem;
+        private MapOcclusionSystem _occlusionSystem;
+        private RoomSystem _roomSystem;
 
         #endregion
 
         #region 属性
 
-        public bool IsInitialized { get; private set; }
+        public bool IsInitialized => _mapData != null;
 
         #endregion
 
+        #region Unity生命周期
+
         private void Awake()
         {
+            _chunkRenderers = new Dictionary<Vector3Int, ChunkRenderer>();
+            _floorContainers = new Dictionary<int, GameObject>();
             _meshBuilder = new ChunkMeshBuilder();
-            _chunkRenderers = new Dictionary<(int, int, int), ChunkRenderer>();
+        }
 
-            // 如果没有指定材质，创建默认材质
-            if (_tileMaterial == null)
+        private void Start()
+        {
+            // 获取系统引用
+            _mapSystem = GameMain.Interface.GetSystem<MapSystem>();
+            _mapDataModel = GameMain.Interface.GetModel<MapDataModel>();
+            _cullingSystem = GameMain.Interface.GetSystem<ChunkCullingSystem>();
+            _occlusionSystem = GameMain.Interface.GetSystem<MapOcclusionSystem>();
+            _roomSystem = GameMain.Interface.GetSystem<RoomSystem>();
+
+            // 注册视图
+            _mapSystem.InitializeMapView(this);
+
+            // 设置摄像机
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+
+            _mapSystem.SetMainCamera(_mainCamera);
+
+            // 订阅事件
+            _cullingSystem.OnChunksVisible += OnChunksVisible;
+            _cullingSystem.OnChunksHidden += OnChunksHidden;
+            _occlusionSystem.OnRoomAlphaChanged += OnRoomAlphaChanged;
+        }
+
+        private void Update()
+        {
+            if (!IsInitialized)
+                return;
+
+            // 更新地图系统
+            _mapSystem.UpdateMap(Time.deltaTime);
+
+            // 处理输入（悬停模式）
+            if (_occlusionSystem.CurrentMode == EOcclusionMode.Hover)
             {
-                CreateDefaultMaterial();
+                _occlusionSystem.UpdateMouseScreenPosition(Input.mousePosition, _mainCamera);
             }
         }
+
+        private void OnDestroy()
+        {
+            if (_cullingSystem != null)
+            {
+                _cullingSystem.OnChunksVisible -= OnChunksVisible;
+                _cullingSystem.OnChunksHidden -= OnChunksHidden;
+            }
+
+            if (_occlusionSystem != null)
+            {
+                _occlusionSystem.OnRoomAlphaChanged -= OnRoomAlphaChanged;
+            }
+
+            Clear();
+        }
+
+        #endregion
+
+        #region 公共方法
 
         /// <summary>
         /// 初始化地图视图
@@ -54,150 +128,254 @@ namespace Core.Game.Map.View
         public void Initialize(MapData mapData)
         {
             if (mapData == null)
+            {
+                Debug.LogError("[MapView] Initialize failed: mapData is null");
                 return;
+            }
 
-            // 清理旧数据
             Clear();
 
             _mapData = mapData;
-            _currentViewFloor = 0;
 
-            // 创建所有 ChunkRenderer
+            // 创建楼层容器
+            CreateFloorContainers();
+
+            // 创建所有Chunk渲染器
             CreateAllChunkRenderers();
 
-            IsInitialized = true;
-
-            Debug.Log($"[MapView] Initialized with {_chunkRenderers.Count} chunks");
+            Debug.Log($"[MapView] Initialized with {_chunkRenderers.Count} chunk renderers");
         }
 
         /// <summary>
-        /// 清理
+        /// 清除视图
         /// </summary>
         public void Clear()
         {
-            foreach (var kvp in _chunkRenderers)
+            // 销毁所有Chunk渲染器
+            foreach (var renderer in _chunkRenderers.Values)
             {
-                if (kvp.Value != null)
+                if (renderer != null)
                 {
-                    if (Application.isPlaying)
-                        Destroy(kvp.Value.gameObject);
-                    else
-                        DestroyImmediate(kvp.Value.gameObject);
+                    Destroy(renderer.gameObject);
                 }
             }
-
             _chunkRenderers.Clear();
+
+            // 销毁楼层容器
+            foreach (var container in _floorContainers.Values)
+            {
+                if (container != null)
+                {
+                    Destroy(container);
+                }
+            }
+            _floorContainers.Clear();
+
             _mapData = null;
-            IsInitialized = false;
         }
 
         /// <summary>
-        /// 创建所有 ChunkRenderer
+        /// 楼层变化处理
+        /// </summary>
+        public void OnFloorChanged(int oldFloor, int newFloor)
+        {
+            // 隐藏高于当前楼层的所有Chunk
+            foreach (var kvp in _chunkRenderers)
+            {
+                var pos = kvp.Key;
+                var renderer = kvp.Value;
+
+                if (pos.z > newFloor)
+                {
+                    renderer.SetVisible(false);
+                }
+                else
+                {
+                    renderer.SetVisible(true);
+                }
+            }
+
+            // 更新楼层容器可见性
+            foreach (var kvp in _floorContainers)
+            {
+                kvp.Value.SetActive(kvp.Key <= newFloor);
+            }
+        }
+
+        /// <summary>
+        /// 刷新指定Chunk
+        /// </summary>
+        public void RefreshChunk(int chunkX, int chunkY, int floor)
+        {
+            var key = new Vector3Int(chunkX, chunkY, floor);
+            if (_chunkRenderers.TryGetValue(key, out var renderer))
+            {
+                renderer.BuildAllMeshes();
+            }
+        }
+
+        /// <summary>
+        /// 刷新所有脏Chunk
+        /// </summary>
+        public void RefreshDirtyChunks()
+        {
+            foreach (var renderer in _chunkRenderers.Values)
+            {
+                renderer.RefreshIfDirty();
+            }
+        }
+
+        #endregion
+
+        #region 私有方法
+
+        /// <summary>
+        /// 创建楼层容器
+        /// </summary>
+        private void CreateFloorContainers()
+        {
+            for (int floor = 0; floor < _mapData.FloorCount; floor++)
+            {
+                var container = new GameObject($"Floor_{floor}");
+                container.transform.SetParent(transform, false);
+                _floorContainers[floor] = container;
+            }
+        }
+
+        /// <summary>
+        /// 创建所有Chunk渲染器
         /// </summary>
         private void CreateAllChunkRenderers()
         {
-            if (_mapData == null)
-                return;
-
             for (int floor = 0; floor < _mapData.FloorCount; floor++)
             {
                 for (int cy = 0; cy < _mapData.ChunkCountY; cy++)
                 {
                     for (int cx = 0; cx < _mapData.ChunkCountX; cx++)
                     {
-                        var chunk = _mapData.GetChunk(cx, cy, floor);
-                        if (chunk != null)
-                        {
-                            CreateChunkRenderer(chunk);
-                        }
+                        CreateChunkRenderer(cx, cy, floor);
                     }
                 }
             }
-
-            // 初始化楼层可见性
-            UpdateFloorVisibility();
         }
 
         /// <summary>
-        /// 创建单个 ChunkRenderer
+        /// 创建单个Chunk渲染器
         /// </summary>
-        private ChunkRenderer CreateChunkRenderer(ChunkData chunk)
+        private ChunkRenderer CreateChunkRenderer(int chunkX, int chunkY, int floor)
         {
-            var key = (chunk.ChunkX, chunk.ChunkY, chunk.Floor);
+            var chunkData = _mapData.GetChunk(chunkX, chunkY, floor);
+            if (chunkData == null)
+                return null;
 
+            var key = new Vector3Int(chunkX, chunkY, floor);
             if (_chunkRenderers.ContainsKey(key))
-            {
-                Debug.LogWarning($"[MapView] ChunkRenderer already exists: {key}");
                 return _chunkRenderers[key];
+
+            // 创建GameObject
+            var go = new GameObject($"Chunk_{chunkX}_{chunkY}_{floor}");
+
+            // 设置父对象
+            if (_floorContainers.TryGetValue(floor, out var container))
+            {
+                go.transform.SetParent(container.transform, false);
+            }
+            else
+            {
+                go.transform.SetParent(transform, false);
             }
 
-            var renderer = ChunkRenderer.Create(chunk, _tileMaterial, _meshBuilder, transform);
-            _chunkRenderers[key] = renderer;
+            // 添加ChunkRenderer组件
+            var renderer = go.AddComponent<ChunkRenderer>();
+            renderer.Initialize(chunkData, _meshBuilder);
 
+            // 默认隐藏（等待视野裁剪系统激活）
+            renderer.SetVisible(false);
+
+            _chunkRenderers[key] = renderer;
             return renderer;
         }
 
         /// <summary>
-        /// 刷新指定 Chunk
+        /// 获取Chunk渲染器
         /// </summary>
-        public void RefreshChunk(int chunkX, int chunkY, int floor)
+        private ChunkRenderer GetChunkRenderer(int chunkX, int chunkY, int floor)
         {
-            var key = (chunkX, chunkY, floor);
-
-            if (_chunkRenderers.TryGetValue(key, out var renderer))
-            {
-                renderer.RebuildMesh();
-            }
-        }
-
-        /// <summary>
-        /// 楼层变更
-        /// </summary>
-        public void OnFloorChanged(int oldFloor, int newFloor)
-        {
-            _currentViewFloor = newFloor;
-            UpdateFloorVisibility();
-        }
-
-        /// <summary>
-        /// 更新楼层可见性
-        /// </summary>
-        private void UpdateFloorVisibility()
-        {
-            foreach (var kvp in _chunkRenderers)
-            {
-                kvp.Value.SetFloorVisibility(_currentViewFloor);
-            }
-        }
-
-        /// <summary>
-        /// 创建默认材质
-        /// </summary>
-        private void CreateDefaultMaterial()
-        {
-            // 使用顶点颜色的简单 Shader
-            var shader = Shader.Find("Sprites/Default");
-            if (shader == null)
-            {
-                shader = Shader.Find("Unlit/Color");
-            }
-
-            _tileMaterial = new Material(shader);
-            _tileMaterial.name = "DefaultTileMaterial";
-
-            Debug.Log("[MapView] Created default material");
-        }
-
-        /// <summary>
-        /// 获取 ChunkRenderer
-        /// </summary>
-        public ChunkRenderer GetChunkRenderer(int chunkX, int chunkY, int floor)
-        {
-            var key = (chunkX, chunkY, floor);
+            var key = new Vector3Int(chunkX, chunkY, floor);
             return _chunkRenderers.TryGetValue(key, out var renderer) ? renderer : null;
         }
 
-        #region 调试
+        #endregion
+
+        #region 事件处理
+
+        /// <summary>
+        /// Chunk变为可见
+        /// </summary>
+        private void OnChunksVisible(List<Vector3Int> chunks)
+        {
+            foreach (var chunk in chunks)
+            {
+                var renderer = GetChunkRenderer(chunk.x, chunk.y, chunk.z);
+                if (renderer != null)
+                {
+                    renderer.SetVisible(true);
+                    renderer.RefreshIfDirty();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Chunk变为不可见
+        /// </summary>
+        private void OnChunksHidden(List<Vector3Int> chunks)
+        {
+            foreach (var chunk in chunks)
+            {
+                var renderer = GetChunkRenderer(chunk.x, chunk.y, chunk.z);
+                if (renderer != null)
+                {
+                    renderer.SetVisible(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 房间透明度变化
+        /// </summary>
+        private void OnRoomAlphaChanged(int roomId, float alpha)
+        {
+            // 找到包含该房间的所有Chunk，更新屋顶透明度
+            // 这是一个简化实现，实际需要更精确的房间-Chunk映射
+            var room = _roomSystem.GetRoom(roomId);
+            if (room == null)
+                return;
+
+            // 遍历房间内的格子，找到涉及的Chunk
+            var affectedChunks = new HashSet<Vector3Int>();
+            foreach (var cellPos in room.Cells)
+            {
+                int chunkX = cellPos.x / MapDefine.ChunkSize;
+                int chunkY = cellPos.y / MapDefine.ChunkSize;
+                affectedChunks.Add(new Vector3Int(chunkX, chunkY, room.Floor));
+            }
+
+            // 更新这些Chunk的屋顶透明度
+            // 注意：这是简化实现，会影响整个Chunk而不是精确到房间
+            // 后续可以优化为使用房间遮罩纹理
+            foreach (var chunkPos in affectedChunks)
+            {
+                var renderer = GetChunkRenderer(chunkPos.x, chunkPos.y, chunkPos.z);
+                if (renderer != null)
+                {
+                    renderer.SetRoofAlpha(alpha);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Debug
 
         private void OnGUI()
         {
@@ -205,40 +383,15 @@ namespace Core.Game.Map.View
                 return;
 
             GUILayout.BeginArea(new Rect(10, 10, 300, 200));
-            GUILayout.BeginVertical("box");
-
-            GUILayout.Label($"Map: {_mapData?.MapName ?? "None"}");
-            GUILayout.Label($"Size: {_mapData?.Width ?? 0} x {_mapData?.Height ?? 0}");
-            GUILayout.Label($"Floors: {_mapData?.FloorCount ?? 0}");
-            GUILayout.Label($"Current Floor: {_currentViewFloor}");
-            GUILayout.Label($"Chunks: {_chunkRenderers.Count}");
-
-            GUILayout.Space(10);
-
-            if (GUILayout.Button("Floor Up"))
-            {
-                // 需要通过 MapSystem 调用
-            }
-
-            if (GUILayout.Button("Floor Down"))
-            {
-                // 需要通过 MapSystem 调用
-            }
-
-            GUILayout.EndVertical();
+            GUILayout.Label($"Map: {_mapData.MapName}");
+            GUILayout.Label($"Size: {_mapData.Width}x{_mapData.Height}");
+            GUILayout.Label($"Chunks: {_mapData.ChunkCountX}x{_mapData.ChunkCountY}");
+            GUILayout.Label($"Floor: {_mapDataModel.CurrentFloor}/{_mapData.FloorCount}");
+            GUILayout.Label($"Visible Chunks: {_cullingSystem.VisibleChunks.Count}");
+            GUILayout.Label($"Occlusion Mode: {_occlusionSystem.CurrentMode}");
             GUILayout.EndArea();
         }
 
         #endregion
-
-        private void OnDestroy()
-        {
-            Clear();
-
-            if (_tileMaterial != null && Application.isPlaying)
-            {
-                Destroy(_tileMaterial);
-            }
-        }
     }
 }

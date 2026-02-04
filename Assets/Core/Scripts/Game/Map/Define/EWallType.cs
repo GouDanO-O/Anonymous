@@ -16,14 +16,14 @@ namespace Core.Game.Map.Define
         Wood = 1,
 
         /// <summary>
-        /// 砖墙
-        /// </summary>
-        Brick = 2,
-
-        /// <summary>
         /// 石墙
         /// </summary>
-        Stone = 3,
+        Stone = 2,
+
+        /// <summary>
+        /// 砖墙
+        /// </summary>
+        Brick = 3,
 
         /// <summary>
         /// 金属墙
@@ -33,7 +33,23 @@ namespace Core.Game.Map.Define
         /// <summary>
         /// 玻璃墙
         /// </summary>
-        Glass = 5,
+        Glass = 5
+    }
+
+    /// <summary>
+    /// 墙体方向
+    /// </summary>
+    public enum EWallDirection : byte
+    {
+        /// <summary>
+        /// 北墙（格子上边缘）
+        /// </summary>
+        North = 0,
+
+        /// <summary>
+        /// 西墙（格子左边缘）
+        /// </summary>
+        West = 1
     }
 
     /// <summary>
@@ -59,7 +75,7 @@ namespace Core.Game.Map.Define
         /// <summary>
         /// 锁定
         /// </summary>
-        Locked = 3,
+        Locked = 3
     }
 
     /// <summary>
@@ -83,24 +99,8 @@ namespace Core.Game.Map.Define
         Open = 2,
 
         /// <summary>
-        /// 破损
+        /// 破碎
         /// </summary>
-        Broken = 3,
-    }
-
-    /// <summary>
-    /// 墙体方向
-    /// </summary>
-    public enum EWallDirection : byte
-    {
-        /// <summary>
-        /// 北墙（格子上边）
-        /// </summary>
-        North = 0,
-
-        /// <summary>
-        /// 西墙（格子左边）
-        /// </summary>
-        West = 1,
+        Broken = 3
     }
 }

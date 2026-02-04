@@ -1,4 +1,5 @@
-using Core.Game.Map.Data;
+using System.Collections.Generic;
+using Core.Game.Map.Define;
 using Core.Game.Map.Model;
 using Core.Game.Map.Utility;
 using GDFrameworkCore;
@@ -8,48 +9,37 @@ using UnityEngine.Events;
 namespace Core.Game.Map.System
 {
     /// <summary>
-    /// 遮挡状态
-    /// </summary>
-    public enum EOcclusionState
-    {
-        /// <summary>
-        /// 室外（显示所有内容）
-        /// </summary>
-        Outdoor,
-
-        /// <summary>
-        /// 室内（隐藏屋顶和上层）
-        /// </summary>
-        Indoor,
-
-        /// <summary>
-        /// 过渡中
-        /// </summary>
-        Transitioning
-    }
-
-    /// <summary>
-    /// 遮挡控制系统
-    /// 根据摄像机/玩家位置控制建筑遮挡
+    /// 地图遮挡系统
+    /// 管理室内透视的三种控制模式
     /// </summary>
     public class MapOcclusionSystem : AbstractSystem
     {
         #region 配置
 
         /// <summary>
-        /// 遮挡过渡时间（秒）
+        /// 当前遮挡模式
         /// </summary>
-        public float TransitionDuration = 0.3f;
+        public EOcclusionMode CurrentMode { get; private set; } = EOcclusionMode.FollowPawn;
 
         /// <summary>
-        /// 室内时上层的透明度
+        /// 全局模式：是否显示室内
         /// </summary>
-        public float IndoorUpperFloorAlpha = 0f;
+        public bool GlobalShowInterior { get; private set; } = false;
 
         /// <summary>
-        /// 室内时屋顶的透明度
+        /// 跟随模式：目标PawnId
         /// </summary>
-        public float IndoorRoofAlpha = 0f;
+        public int FollowTargetPawnId { get; private set; } = -1;
+
+        /// <summary>
+        /// 室内屋顶透明度（0=完全透明，1=完全不透明）
+        /// </summary>
+        public float IndoorRoofAlpha = 0.2f;
+
+        /// <summary>
+        /// 透明度过渡速度
+        /// </summary>
+        public float TransitionSpeed = 5f;
 
         #endregion
 
@@ -59,67 +49,52 @@ namespace Core.Game.Map.System
         private RoomSystem _roomSystem;
 
         /// <summary>
-        /// 当前遮挡状态
+        /// 当前需要显示内部的房间ID集合
         /// </summary>
-        private EOcclusionState _currentState = EOcclusionState.Outdoor;
+        private HashSet<int> _revealedRoomIds = new HashSet<int>();
 
         /// <summary>
-        /// 当前所在房间ID
+        /// 房间透明度目标值
         /// </summary>
-        private int _currentRoomId = -1;
+        private Dictionary<int, float> _roomAlphaTargets = new Dictionary<int, float>();
 
         /// <summary>
-        /// 当前检测位置（格子坐标）
+        /// 房间当前透明度
         /// </summary>
-        private Vector2Int _currentCellPos;
+        private Dictionary<int, float> _roomAlphaCurrent = new Dictionary<int, float>();
 
         /// <summary>
-        /// 当前遮挡透明度（0=完全遮挡，1=完全显示）
+        /// 鼠标悬停位置
         /// </summary>
-        private float _currentOcclusionAlpha = 1f;
+        private Vector2Int _hoverCellPos;
 
         /// <summary>
-        /// 目标遮挡透明度
+        /// 跟随目标的位置
         /// </summary>
-        private float _targetOcclusionAlpha = 1f;
+        private Vector2Int _followTargetCellPos;
 
         #endregion
 
         #region 事件
 
         /// <summary>
-        /// 遮挡状态变化事件
-        /// 参数：新状态、当前房间ID
+        /// 遮挡模式变化事件
         /// </summary>
-        public UnityAction<EOcclusionState, int> OnOcclusionStateChanged;
+        public UnityAction<EOcclusionMode> OnModeChanged;
 
         /// <summary>
-        /// 遮挡透明度变化事件
-        /// 参数：当前透明度（0-1）
+        /// 房间透明度变化事件 (roomId, alpha)
         /// </summary>
-        public UnityAction<float> OnOcclusionAlphaChanged;
+        public UnityAction<int, float> OnRoomAlphaChanged;
 
         /// <summary>
-        /// 进入房间事件
+        /// 显示的房间集合变化事件
         /// </summary>
-        public UnityAction<RoomData> OnEnterRoom;
-
-        /// <summary>
-        /// 离开房间事件
-        /// </summary>
-        public UnityAction<RoomData> OnExitRoom;
+        public UnityAction<HashSet<int>> OnRevealedRoomsChanged;
 
         #endregion
 
-        #region 属性
-
-        public EOcclusionState CurrentState => _currentState;
-        public int CurrentRoomId => _currentRoomId;
-        public float CurrentOcclusionAlpha => _currentOcclusionAlpha;
-        public bool IsIndoor => _currentState == EOcclusionState.Indoor;
-        public Vector2Int CurrentCellPos => _currentCellPos;
-
-        #endregion
+        #region 初始化
 
         protected override void OnInit()
         {
@@ -127,77 +102,185 @@ namespace Core.Game.Map.System
             _roomSystem = this.GetSystem<RoomSystem>();
         }
 
-        #region 公共方法
+        #endregion
+
+        #region 公共方法 - 模式控制
 
         /// <summary>
-        /// 更新检测位置（每帧调用）
+        /// 设置遮挡模式
         /// </summary>
-        /// <param name="worldPosition">世界坐标（Unity 坐标）</param>
-        public void UpdatePosition(Vector3 worldPosition)
+        public void SetMode(EOcclusionMode mode)
         {
-            if (_mapDataModel.CurrentMap == null)
+            if (CurrentMode == mode)
                 return;
 
-            int currentFloor = _mapDataModel.CurrentFloor;
+            CurrentMode = mode;
+            Debug.Log($"[MapOcclusionSystem] Mode changed to: {mode}");
 
-            // 转换为格子坐标
-            Vector2Int cellPos = IsometricUtility.ScreenToCellInt(worldPosition, currentFloor);
+            RecalculateOcclusion();
+            OnModeChanged?.Invoke(mode);
+        }
 
-            // 如果位置没有变化，只更新透明度过渡
-            if (cellPos == _currentCellPos)
+        /// <summary>
+        /// 全局模式：切换显示/隐藏
+        /// </summary>
+        public void ToggleGlobalInterior()
+        {
+            GlobalShowInterior = !GlobalShowInterior;
+            Debug.Log($"[MapOcclusionSystem] Global interior: {GlobalShowInterior}");
+
+            if (CurrentMode == EOcclusionMode.Global)
             {
-                UpdateTransition();
+                RecalculateOcclusion();
+            }
+        }
+
+        /// <summary>
+        /// 全局模式：设置显示状态
+        /// </summary>
+        public void SetGlobalInterior(bool show)
+        {
+            if (GlobalShowInterior == show)
                 return;
-            }
 
-            _currentCellPos = cellPos;
+            GlobalShowInterior = show;
 
-            // 检查是否在室内
-            int newRoomId = _roomSystem.GetRoomId(cellPos.x, cellPos.y, currentFloor);
-            bool wasIndoor = _currentRoomId >= 0;
-            bool isIndoor = newRoomId >= 0;
-
-            // 状态变化
-            if (wasIndoor != isIndoor || _currentRoomId != newRoomId)
+            if (CurrentMode == EOcclusionMode.Global)
             {
-                HandleStateChange(wasIndoor, isIndoor, newRoomId, currentFloor);
+                RecalculateOcclusion();
+            }
+        }
+
+        /// <summary>
+        /// 悬停模式：更新鼠标位置
+        /// </summary>
+        public void UpdateMousePosition(Vector3 worldPos)
+        {
+            if (CurrentMode != EOcclusionMode.Hover)
+                return;
+
+            var cellPos = IsometricUtility.ScreenToCellInt(worldPos, _mapDataModel.CurrentFloor);
+
+            if (cellPos != _hoverCellPos)
+            {
+                _hoverCellPos = cellPos;
+                RecalculateOcclusion();
+            }
+        }
+
+        /// <summary>
+        /// 悬停模式：更新鼠标位置（屏幕坐标）
+        /// </summary>
+        public void UpdateMouseScreenPosition(Vector3 screenPos, Camera camera)
+        {
+            if (CurrentMode != EOcclusionMode.Hover || camera == null)
+                return;
+
+            Vector3 worldPos = camera.ScreenToWorldPoint(screenPos);
+            UpdateMousePosition(worldPos);
+        }
+
+        /// <summary>
+        /// 跟随模式：设置跟随目标
+        /// </summary>
+        public void SetFollowTarget(int pawnId)
+        {
+            FollowTargetPawnId = pawnId;
+
+            if (CurrentMode == EOcclusionMode.FollowPawn)
+            {
+                RecalculateOcclusion();
+            }
+        }
+
+        /// <summary>
+        /// 跟随模式：更新目标位置
+        /// </summary>
+        public void UpdateFollowTargetPosition(int cellX, int cellY)
+        {
+            if (CurrentMode != EOcclusionMode.FollowPawn)
+                return;
+
+            var newPos = new Vector2Int(cellX, cellY);
+            if (newPos != _followTargetCellPos)
+            {
+                _followTargetCellPos = newPos;
+                RecalculateOcclusion();
+            }
+        }
+
+        #endregion
+
+        #region 公共方法 - 查询
+
+        /// <summary>
+        /// 检查房间是否应该显示内部
+        /// </summary>
+        public bool IsRoomRevealed(int roomId)
+        {
+            return _revealedRoomIds.Contains(roomId);
+        }
+
+        /// <summary>
+        /// 获取房间当前透明度
+        /// </summary>
+        public float GetRoomAlpha(int roomId)
+        {
+            return _roomAlphaCurrent.TryGetValue(roomId, out float alpha) ? alpha : 1f;
+        }
+
+        /// <summary>
+        /// 获取所有显示内部的房间ID
+        /// </summary>
+        public IReadOnlyCollection<int> GetRevealedRoomIds()
+        {
+            return _revealedRoomIds;
+        }
+
+        #endregion
+
+        #region 公共方法 - 更新
+
+        /// <summary>
+        /// 更新透明度过渡（需要每帧调用）
+        /// </summary>
+        public void UpdateTransitions(float deltaTime)
+        {
+            var roomsToRemove = new List<int>();
+
+            foreach (var kvp in _roomAlphaTargets)
+            {
+                int roomId = kvp.Key;
+                float targetAlpha = kvp.Value;
+
+                if (!_roomAlphaCurrent.TryGetValue(roomId, out float currentAlpha))
+                {
+                    currentAlpha = 1f;
+                }
+
+                // 插值
+                float newAlpha = Mathf.MoveTowards(currentAlpha, targetAlpha, TransitionSpeed * deltaTime);
+                _roomAlphaCurrent[roomId] = newAlpha;
+
+                // 通知变化
+                OnRoomAlphaChanged?.Invoke(roomId, newAlpha);
+
+                // 如果达到目标且目标是完全不透明，可以移除追踪
+                if (Mathf.Approximately(newAlpha, targetAlpha) && Mathf.Approximately(targetAlpha, 1f))
+                {
+                    roomsToRemove.Add(roomId);
+                }
             }
 
-            UpdateTransition();
-        }
-
-        /// <summary>
-        /// 更新检测位置（通过格子坐标）
-        /// </summary>
-        public void UpdateCellPosition(int cellX, int cellY, int floor)
-        {
-            Vector3 worldPos = IsometricUtility.CellCenterToScreen(cellX, cellY, floor);
-            UpdatePosition(worldPos);
-        }
-
-        /// <summary>
-        /// 强制设置遮挡状态
-        /// </summary>
-        public void ForceSetState(EOcclusionState state)
-        {
-            _currentState = state;
-            _targetOcclusionAlpha = state == EOcclusionState.Outdoor ? 1f : 0f;
-            _currentOcclusionAlpha = _targetOcclusionAlpha;
-
-            OnOcclusionStateChanged?.Invoke(_currentState, _currentRoomId);
-            OnOcclusionAlphaChanged?.Invoke(_currentOcclusionAlpha);
-        }
-
-        /// <summary>
-        /// 重置遮挡状态
-        /// </summary>
-        public void Reset()
-        {
-            _currentState = EOcclusionState.Outdoor;
-            _currentRoomId = -1;
-            _currentOcclusionAlpha = 1f;
-            _targetOcclusionAlpha = 1f;
-            _currentCellPos = Vector2Int.zero;
+            // 清理不再需要追踪的房间
+            foreach (var roomId in roomsToRemove)
+            {
+                if (!_revealedRoomIds.Contains(roomId))
+                {
+                    _roomAlphaTargets.Remove(roomId);
+                    _roomAlphaCurrent.Remove(roomId);
+                }
+            }
         }
 
         #endregion
@@ -205,76 +288,88 @@ namespace Core.Game.Map.System
         #region 私有方法
 
         /// <summary>
-        /// 处理状态变化
+        /// 重新计算遮挡状态
         /// </summary>
-        private void HandleStateChange(bool wasIndoor, bool isIndoor, int newRoomId, int floor)
+        private void RecalculateOcclusion()
         {
-            RoomData oldRoom = null;
-            RoomData newRoom = null;
+            var newRevealedRooms = new HashSet<int>();
 
-            // 离开旧房间
-            if (wasIndoor && _currentRoomId >= 0)
+            switch (CurrentMode)
             {
-                oldRoom = _roomSystem.GetRoomById(_currentRoomId, floor);
+                case EOcclusionMode.Global:
+                    if (GlobalShowInterior)
+                    {
+                        // 显示所有房间内部
+                        var allRooms = _roomSystem.GetRoomsInFloor(_mapDataModel.CurrentFloor);
+                        foreach (var room in allRooms)
+                        {
+                            newRevealedRooms.Add(room.RoomId);
+                        }
+                    }
+                    break;
+
+                case EOcclusionMode.Hover:
+                    // 获取鼠标位置的房间
+                    int hoverRoomId = _roomSystem.GetRoomId(_hoverCellPos.x, _hoverCellPos.y);
+                    if (hoverRoomId >= 0)
+                    {
+                        newRevealedRooms.Add(hoverRoomId);
+                    }
+                    break;
+
+                case EOcclusionMode.FollowPawn:
+                    // 获取跟随目标的房间
+                    int followRoomId = _roomSystem.GetRoomId(_followTargetCellPos.x, _followTargetCellPos.y);
+                    if (followRoomId >= 0)
+                    {
+                        newRevealedRooms.Add(followRoomId);
+                    }
+                    break;
             }
 
-            // 进入新房间
-            if (isIndoor && newRoomId >= 0)
-            {
-                newRoom = _roomSystem.GetRoomById(newRoomId, floor);
-            }
-
-            // 更新房间ID
-            int previousRoomId = _currentRoomId;
-            _currentRoomId = newRoomId;
-
-            // 状态切换
-            EOcclusionState newState;
-            if (isIndoor)
-            {
-                newState = EOcclusionState.Indoor;
-                _targetOcclusionAlpha = IndoorRoofAlpha;
-            }
-            else
-            {
-                newState = EOcclusionState.Outdoor;
-                _targetOcclusionAlpha = 1f;
-            }
-
-            // 触发事件
-            if (oldRoom != null && (newRoom == null || oldRoom.RoomId != newRoom.RoomId))
-            {
-                OnExitRoom?.Invoke(oldRoom);
-            }
-
-            if (newRoom != null && (oldRoom == null || oldRoom.RoomId != newRoom.RoomId))
-            {
-                OnEnterRoom?.Invoke(newRoom);
-            }
-
-            if (_currentState != newState)
-            {
-                _currentState = newState;
-                OnOcclusionStateChanged?.Invoke(_currentState, _currentRoomId);
-
-                Debug.Log($"[MapOcclusionSystem] State changed to {_currentState}, RoomId: {_currentRoomId}");
-            }
+            // 更新状态
+            UpdateRevealedRooms(newRevealedRooms);
         }
 
         /// <summary>
-        /// 更新透明度过渡
+        /// 更新显示的房间集合
         /// </summary>
-        private void UpdateTransition()
+        private void UpdateRevealedRooms(HashSet<int> newRevealedRooms)
         {
-            if (Mathf.Approximately(_currentOcclusionAlpha, _targetOcclusionAlpha))
-                return;
+            // 找出需要开始隐藏的房间（之前显示，现在不显示）
+            foreach (int roomId in _revealedRoomIds)
+            {
+                if (!newRevealedRooms.Contains(roomId))
+                {
+                    // 开始隐藏过渡：目标透明度 = 1（完全不透明）
+                    _roomAlphaTargets[roomId] = 1f;
+                }
+            }
 
-            // 平滑过渡
-            float speed = 1f / TransitionDuration;
-            _currentOcclusionAlpha = Mathf.MoveTowards(_currentOcclusionAlpha, _targetOcclusionAlpha,
-                speed * Time.deltaTime);
+            // 找出需要开始显示的房间（之前不显示，现在显示）
+            foreach (int roomId in newRevealedRooms)
+            {
+                if (!_revealedRoomIds.Contains(roomId))
+                {
+                    // 开始显示过渡：目标透明度 = IndoorRoofAlpha
+                    _roomAlphaTargets[roomId] = IndoorRoofAlpha;
 
-            OnOcclusionAlphaChanged?.Invoke(_currentOcclusionAlpha);
+                    // 如果还没有当前值，设置为完全不透明
+                    if (!_roomAlphaCurrent.ContainsKey(roomId))
+                    {
+                        _roomAlphaCurrent[roomId] = 1f;
+                    }
+                }
+            }
+
+            // 更新集合
+            bool changed = !_revealedRoomIds.SetEquals(newRevealedRooms);
+            _revealedRoomIds = newRevealedRooms;
+
+            if (changed)
+            {
+                OnRevealedRoomsChanged?.Invoke(_revealedRoomIds);
+            }
         }
 
         #endregion

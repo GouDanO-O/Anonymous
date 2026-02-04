@@ -7,7 +7,7 @@ namespace Core.Game.Map.Utility
 {
     /// <summary>
     /// 房间检测工具
-    /// 使用 Flood Fill 算法识别被墙壁包围的封闭空间
+    /// 使用Flood Fill算法识别被墙壁包围的封闭空间
     /// </summary>
     public static class RoomDetectionUtility
     {
@@ -22,6 +22,7 @@ namespace Core.Game.Map.Utility
             {
                 var floorRoomData = DetectRoomsInFloor(mapData, floor);
                 result[floor] = floorRoomData;
+                mapData.SetFloorRoomData(floor, floorRoomData);
             }
 
             return result;
@@ -34,7 +35,7 @@ namespace Core.Game.Map.Utility
         {
             var floorRoomData = new FloorRoomData(floor);
             var visited = new HashSet<Vector2Int>();
-            int nextRoomId = 0;
+            int nextRoomId = floor * 1000; // 每层楼的房间ID从 floor*1000 开始，避免冲突
 
             // 遍历所有格子
             for (int y = 0; y < mapData.Height; y++)
@@ -55,10 +56,12 @@ namespace Core.Game.Map.Utility
                     if (!cell.HasFlag(ECellFlags.HasRoof))
                     {
                         visited.Add(pos);
+                        cell.RoomId = -1; // 室外
+                        cell.RemoveFlag(ECellFlags.Indoor);
                         continue;
                     }
 
-                    // 使用 Flood Fill 找到连通的室内区域
+                    // 使用Flood Fill找到连通的室内区域
                     var room = FloodFillRoom(mapData, floor, x, y, nextRoomId, visited);
 
                     if (room != null && room.Area > 0)
@@ -75,7 +78,7 @@ namespace Core.Game.Map.Utility
         }
 
         /// <summary>
-        /// Flood Fill 算法找到连通的室内区域
+        /// Flood Fill算法找到连通的室内区域
         /// </summary>
         private static RoomData FloodFillRoom(MapData mapData, int floor, int startX, int startY,
             int roomId, HashSet<Vector2Int> globalVisited)
@@ -104,13 +107,13 @@ namespace Core.Game.Map.Utility
                 room.AddCell(current);
                 globalVisited.Add(current);
 
-                // 更新格子的房间ID
+                // 更新格子的房间ID和室内标记
                 cell.RoomId = roomId;
-                cell.SetFlag(ECellFlags.Indoor, true);
+                cell.AddFlag(ECellFlags.Indoor);
 
                 // 检查四个方向的邻居
-                TryAddNeighbor(mapData, floor, current, 0, 1, queue, localVisited, globalVisited); // 北
-                TryAddNeighbor(mapData, floor, current, 1, 0, queue, localVisited, globalVisited); // 东
+                TryAddNeighbor(mapData, floor, current, 0, 1, queue, localVisited, globalVisited);  // 北
+                TryAddNeighbor(mapData, floor, current, 1, 0, queue, localVisited, globalVisited);  // 东
                 TryAddNeighbor(mapData, floor, current, 0, -1, queue, localVisited, globalVisited); // 南
                 TryAddNeighbor(mapData, floor, current, -1, 0, queue, localVisited, globalVisited); // 西
             }
@@ -154,48 +157,61 @@ namespace Core.Game.Map.Utility
         /// <summary>
         /// 检查两个相邻格子之间是否有墙阻挡
         /// </summary>
-        private static bool IsWallBlocking(MapData mapData, int floor, Vector2Int from, Vector2Int to)
+        public static bool IsWallBlocking(MapData mapData, int floor, Vector2Int from, Vector2Int to)
         {
             int dx = to.x - from.x;
             int dy = to.y - from.y;
 
-            // 向北移动：检查目标格子的南边界（即 from 格子的北墙）
-            // 在 N/W 墙系统中，北墙属于当前格子
-            if (dy > 0)
+            var fromCell = mapData.GetCell(from.x, from.y, floor);
+            var toCell = mapData.GetCell(to.x, to.y, floor);
+
+            if (fromCell == null || toCell == null)
+                return true; // 无效格子视为阻挡
+
+            // 北墙/西墙系统：
+            // - 每个格子拥有其北边和西边的墙
+            // - 向北移动：检查当前格子(from)的北墙
+            // - 向南移动：检查目标格子(to)的北墙
+            // - 向东移动：检查目标格子(to)的西墙
+            // - 向西移动：检查当前格子(from)的西墙
+
+            if (dy > 0) // 向北移动
             {
-                // 检查 to 格子的南边界，即 from 格子的北墙不存在
-                // 或者 to 格子有北墙意味着可以通过（因为北墙在格子的北边界）
-                // 实际上：from 到 to(北)，需要检查 from 的北墙
-                var fromCell = mapData.GetCell(from.x, from.y, floor);
-                if (fromCell != null && fromCell.WallNorth.HasWall && !fromCell.WallNorth.IsPassable)
+                if (fromCell.WallNorth.HasWall && !fromCell.WallNorth.IsPassable)
+                    return true;
+            }
+            else if (dy < 0) // 向南移动
+            {
+                if (toCell.WallNorth.HasWall && !toCell.WallNorth.IsPassable)
                     return true;
             }
 
-            // 向南移动：检查 from 格子的南边界（即 to 格子的北墙）
-            if (dy < 0)
+            if (dx > 0) // 向东移动
             {
-                var toCell = mapData.GetCell(to.x, to.y, floor);
-                if (toCell != null && toCell.WallNorth.HasWall && !toCell.WallNorth.IsPassable)
+                if (toCell.WallWest.HasWall && !toCell.WallWest.IsPassable)
                     return true;
             }
-
-            // 向东移动：检查 to 格子的西墙
-            if (dx > 0)
+            else if (dx < 0) // 向西移动
             {
-                var toCell = mapData.GetCell(to.x, to.y, floor);
-                if (toCell != null && toCell.WallWest.HasWall && !toCell.WallWest.IsPassable)
-                    return true;
-            }
-
-            // 向西移动：检查 from 格子的西墙
-            if (dx < 0)
-            {
-                var fromCell = mapData.GetCell(from.x, from.y, floor);
-                if (fromCell != null && fromCell.WallWest.HasWall && !fromCell.WallWest.IsPassable)
+                if (fromCell.WallWest.HasWall && !fromCell.WallWest.IsPassable)
                     return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 检查从一个格子到另一个格子是否可通行（考虑墙体）
+        /// </summary>
+        public static bool CanPass(MapData mapData, int floor, Vector2Int from, Vector2Int to)
+        {
+            // 首先检查目标格子是否可行走
+            var toCell = mapData.GetCell(to.x, to.y, floor);
+            if (toCell == null || !toCell.IsWalkable)
+                return false;
+
+            // 然后检查是否有墙阻挡
+            return !IsWallBlocking(mapData, floor, from, to);
         }
 
         /// <summary>
@@ -214,6 +230,17 @@ namespace Core.Game.Map.Utility
         {
             var cell = mapData.GetCell(x, y, floor);
             return cell?.RoomId ?? -1;
+        }
+
+        /// <summary>
+        /// 重新检测指定区域的房间（增量更新）
+        /// </summary>
+        public static void RefreshRoomsInArea(MapData mapData, int floor, int minX, int minY, int maxX, int maxY)
+        {
+            // 简化实现：重新检测整层
+            // 后续可以优化为只检测受影响的区域
+            var floorRoomData = DetectRoomsInFloor(mapData, floor);
+            mapData.SetFloorRoomData(floor, floorRoomData);
         }
     }
 }

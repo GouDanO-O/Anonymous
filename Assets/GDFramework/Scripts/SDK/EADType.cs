@@ -28,9 +28,9 @@
         FloatIcon,
 
         /// <summary>
-        /// 插屏广告--图片
+        /// 插屏广告
         /// </summary>
-        InterstitialImg,
+        Interstitial,
 
         /// <summary>
         /// 插屏广告--视频

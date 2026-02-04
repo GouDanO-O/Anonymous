@@ -13,17 +13,17 @@ namespace Core.Game.Map.Data
         #region 位置
 
         /// <summary>
-        /// X 坐标
+        /// X坐标
         /// </summary>
         public int X;
 
         /// <summary>
-        /// Y 坐标
+        /// Y坐标
         /// </summary>
         public int Y;
 
         /// <summary>
-        /// Z 坐标（楼层）
+        /// Z坐标（楼层）
         /// </summary>
         public int Z;
 
@@ -60,9 +60,9 @@ namespace Core.Game.Map.Data
         #region 物体
 
         /// <summary>
-        /// 格子内的物体列表
+        /// 格子内的物体ID列表
         /// </summary>
-        public List<CellObjectData> Objects;
+        public List<int> ObjectIds;
 
         #endregion
 
@@ -74,9 +74,14 @@ namespace Core.Game.Map.Data
         public ECellFlags Flags;
 
         /// <summary>
-        /// 所属房间 ID（-1 表示室外）
+        /// 所属房间ID（-1表示室外）
         /// </summary>
         public int RoomId;
+
+        /// <summary>
+        /// 移动代价（用于A*寻路，默认为1）
+        /// </summary>
+        public byte MoveCost;
 
         #endregion
 
@@ -98,6 +103,11 @@ namespace Core.Game.Map.Data
         public bool HasRoof => (Flags & ECellFlags.HasRoof) != 0;
 
         /// <summary>
+        /// 是否可建造
+        /// </summary>
+        public bool IsBuildable => (Flags & ECellFlags.Buildable) != 0;
+
+        /// <summary>
         /// 是否有地板
         /// </summary>
         public bool HasFloor => FloorType != EFloorType.None;
@@ -112,15 +122,28 @@ namespace Core.Game.Map.Data
         /// </summary>
         public bool HasWallWest => WallWest.HasWall;
 
+        /// <summary>
+        /// 是否有任何墙体
+        /// </summary>
+        public bool HasAnyWall => HasWallNorth || HasWallWest;
+
+        /// <summary>
+        /// 是否有物体
+        /// </summary>
+        public bool HasObjects => ObjectIds != null && ObjectIds.Count > 0;
+
         #endregion
 
         #region 构造函数
 
         public CellData()
         {
-            Objects = new List<CellObjectData>();
+            ObjectIds = new List<int>();
             RoomId = -1;
+            MoveCost = 1;
             Flags = ECellFlags.Walkable | ECellFlags.Buildable;
+            WallNorth = WallData.Empty;
+            WallWest = WallData.Empty;
         }
 
         public CellData(int x, int y, int z) : this()
@@ -132,7 +155,7 @@ namespace Core.Game.Map.Data
 
         #endregion
 
-        #region 方法
+        #region 标记操作
 
         /// <summary>
         /// 设置标记
@@ -154,20 +177,43 @@ namespace Core.Game.Map.Data
         }
 
         /// <summary>
+        /// 添加标记
+        /// </summary>
+        public void AddFlag(ECellFlags flag)
+        {
+            Flags |= flag;
+        }
+
+        /// <summary>
+        /// 移除标记
+        /// </summary>
+        public void RemoveFlag(ECellFlags flag)
+        {
+            Flags &= ~flag;
+        }
+
+        #endregion
+
+        #region 物体操作
+
+        /// <summary>
         /// 添加物体
         /// </summary>
-        public void AddObject(CellObjectData obj)
+        public void AddObject(int objectId)
         {
-            Objects ??= new List<CellObjectData>();
-            Objects.Add(obj);
+            ObjectIds ??= new List<int>();
+            if (!ObjectIds.Contains(objectId))
+            {
+                ObjectIds.Add(objectId);
+            }
         }
 
         /// <summary>
         /// 移除物体
         /// </summary>
-        public bool RemoveObject(CellObjectData obj)
+        public bool RemoveObject(int objectId)
         {
-            return Objects?.Remove(obj) ?? false;
+            return ObjectIds?.Remove(objectId) ?? false;
         }
 
         /// <summary>
@@ -175,8 +221,20 @@ namespace Core.Game.Map.Data
         /// </summary>
         public void ClearObjects()
         {
-            Objects?.Clear();
+            ObjectIds?.Clear();
         }
+
+        /// <summary>
+        /// 检查是否有指定物体
+        /// </summary>
+        public bool ContainsObject(int objectId)
+        {
+            return ObjectIds?.Contains(objectId) ?? false;
+        }
+
+        #endregion
+
+        #region 墙体操作
 
         /// <summary>
         /// 获取墙体数据
@@ -197,44 +255,38 @@ namespace Core.Game.Map.Data
                 WallWest = wallData;
         }
 
+        /// <summary>
+        /// 移除墙体
+        /// </summary>
+        public void RemoveWall(EWallDirection direction)
+        {
+            SetWall(direction, WallData.Empty);
+        }
+
         #endregion
-    }
 
-    /// <summary>
-    /// 格子内物体数据
-    /// </summary>
-    [Serializable]
-    public class CellObjectData
-    {
-        /// <summary>
-        /// 物体类型
-        /// </summary>
-        public EObjectType ObjectType;
+        #region 工具方法
 
         /// <summary>
-        /// 物体唯一 ID
+        /// 重置格子到初始状态
         /// </summary>
-        public int ObjectId;
-
-        /// <summary>
-        /// 旋转角度（0, 90, 180, 270）
-        /// </summary>
-        public byte Rotation;
-
-        /// <summary>
-        /// 耐久度
-        /// </summary>
-        public byte Health;
-
-        public CellObjectData()
+        public void Reset()
         {
-            Health = 100;
+            GroundType = EGroundType.None;
+            FloorType = EFloorType.None;
+            WallNorth = WallData.Empty;
+            WallWest = WallData.Empty;
+            ObjectIds?.Clear();
+            Flags = ECellFlags.Walkable | ECellFlags.Buildable;
+            RoomId = -1;
+            MoveCost = 1;
         }
 
-        public CellObjectData(EObjectType objectType, int objectId) : this()
+        public override string ToString()
         {
-            ObjectType = objectType;
-            ObjectId = objectId;
+            return $"Cell({X}, {Y}, {Z}) Ground={GroundType} Floor={FloorType} Room={RoomId}";
         }
+
+        #endregion
     }
 }
