@@ -1,5 +1,10 @@
+using Core.Game.Building.Model;
+using Core.Game.Building.System;
 using Core.Game.Map.Model;
 using Core.Game.Map.System;
+using Core.Game.Navigation.System;
+using Core.Game.Pawn.Model;
+using Core.Game.Pawn.System;
 using Core.Game.Procedure.Models.Resource;
 using GDFrameworkCore;
 
@@ -17,6 +22,17 @@ namespace Core.Game
             this.RegisterSystem(new MapOcclusionSystem());
             this.RegisterSystem(new ChunkCullingSystem());
             this.RegisterSystem(new MapSystem());
+
+            // Navigation模块
+            this.RegisterSystem(new NavigationSystem());
+
+            // Pawn模块（依赖Navigation）
+            this.RegisterSystem(new PawnMovementSystem());
+            this.RegisterSystem(new PawnSystem());
+
+            // Building模块（依赖Map）
+            this.RegisterSystem(new BlueprintPlaceSystem());
+            this.RegisterSystem(new BuildingSystem());
         }
 
         protected override void Register_Model()
@@ -27,6 +43,12 @@ namespace Core.Game
 
             // Map模块
             this.RegisterModel(new MapDataModel());
+
+            // Pawn模块
+            this.RegisterModel(new PawnDataModel());
+
+            // Building模块
+            this.RegisterModel(new BuildingDataModel());
         }
 
         protected override void Register_Utility()
