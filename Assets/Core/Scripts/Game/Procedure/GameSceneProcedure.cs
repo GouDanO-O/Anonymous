@@ -1,4 +1,5 @@
-﻿using Core.Game.Procedure.Resource;
+﻿using Core.Game.Map.System;
+using Core.Game.Procedure.Resource;
 using Core.Game.View;
 using GDFramework.Input;
 using GDFramework.Procedure;
@@ -6,6 +7,7 @@ using GDFramework.Resource;
 using GDFramework.Scene;
 using GDFrameworkCore;
 using GDFrameworkExtend.FSM;
+using GDFrameworkExtend.LogKit;
 using GDFrameworkExtend.UIKit;
 
 namespace Core.Game.Procedure
@@ -69,6 +71,11 @@ namespace Core.Game.Procedure
         {
             GameManager.Instance.LoadGameSceneComplete();
             this.GetSystem<SceneLoaderKit>().OnSceneLoadComplete -= LoadGameSceneComplete;
+
+            // 初始化地图
+            var mapSystem = this.GetSystem<MapSystem>();
+            mapSystem.CreateMap("TestWorld", 250, 250, 3, 42);
+            LogKit.Log("GameSceneProcedure: 地图初始化完成");
         }
     }
 }

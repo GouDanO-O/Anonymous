@@ -393,7 +393,6 @@ GameObject:
   m_Component:
   - component: {fileID: 631909822}
   - component: {fileID: 631909823}
-  - component: {fileID: 631909824}
   m_Layer: 0
   m_Name: Tester
   m_TagString: Untagged
@@ -429,28 +428,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Game.Map.View.MapView
   _mainCamera: {fileID: 549550280}
-  _showDebugInfo: 1
---- !u!114 &631909824
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 631909821}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a53d0bed171f34145b68569e91343a62, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Core.Game.Map.MapTestLauncher
-  _mapWidth: 100
-  _mapHeight: 100
-  _floorCount: 2
-  _seed: 12345
-  _moveSpeed: 10
-  _zoomSpeed: 5
-  _minZoom: 2
-  _maxZoom: 20
-  _autoLoadOnStart: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

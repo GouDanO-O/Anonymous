@@ -15,12 +15,12 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Terrain
+  - Floor
+  - Wall
+  - Object
+  - Pawn
+  - Roof
   - 
   - 
   - 
