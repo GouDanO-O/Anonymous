@@ -229,6 +229,21 @@ namespace Core.Game.Map.System
                 };
             }
 
+            // 清除门口前方水体，确保入口可通行 (门前3格深, 左右各1格)
+            for (int dy = -1; dy >= -3; dy--)
+            {
+                for (int ddx = -1; ddx <= 1; ddx++)
+                {
+                    var entryCell = mapData.GetCell(doorX + ddx, startY + dy, 0);
+                    if (entryCell != null && entryCell.TerrainDefId == 5)
+                    {
+                        entryCell.TerrainDefId = 2; // 泥土
+                        entryCell.MoveCost = 1;
+                        entryCell.SetFlag(ECellFlags.Walkable, true);
+                    }
+                }
+            }
+
             // 随机在北墙或东墙放一个窗
             bool windowOnNorth = rng.Next(2) == 0;
             if (windowOnNorth)

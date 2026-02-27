@@ -1,3 +1,5 @@
+using Core.Game.Item.Define;
+using Core.Game.Item.Model;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using Core.Game.Map.Utility;
@@ -7,12 +9,13 @@ namespace Core.Game.Map.View
 {
     /// <summary>
     /// 单个Chunk的渲染器
-    /// 管理4个子Mesh (地形/地板/墙/屋顶)
+    /// 管理5个子Mesh (地形/地板/物品/墙/屋顶)
     /// </summary>
     public class ChunkRenderer : MonoBehaviour
     {
         private ChunkData _chunkData;
         private ChunkMeshBuilder _meshBuilder;
+        private ItemDataModel _itemModel;
         private int _mapWidth;
         private int _mapHeight;
 
@@ -22,6 +25,9 @@ namespace Core.Game.Map.View
 
         private MeshFilter _floorFilter;
         private MeshRenderer _floorRenderer;
+
+        private MeshFilter _objectFilter;
+        private MeshRenderer _objectRenderer;
 
         private MeshFilter _wallFilter;
         private MeshRenderer _wallRenderer;
@@ -42,14 +48,17 @@ namespace Core.Game.Map.View
         private const int SortOrderLayerOffset = 5000;
         private const int TerrainLayerBase = 0;
         private const int FloorLayerBase = SortOrderLayerOffset;
+        private const int ObjectLayerBase = ItemConst.ItemSortOrderBase; // 7500
         private const int WallLayerBase = SortOrderLayerOffset * 2;
         private const int RoofLayerBase = SortOrderLayerOffset * 3;
 
         public void Initialize(ChunkData chunkData, ChunkMeshBuilder meshBuilder,
-            Material baseMaterial, int mapWidth, int mapHeight)
+            Material baseMaterial, int mapWidth, int mapHeight,
+            ItemDataModel itemModel = null)
         {
             _chunkData = chunkData;
             _meshBuilder = meshBuilder;
+            _itemModel = itemModel;
             _mapWidth = mapWidth;
             _mapHeight = mapHeight;
 
@@ -71,6 +80,7 @@ namespace Core.Game.Map.View
 
             _terrainRenderer.sortingOrder = TerrainLayerBase + baseSortOrder;
             _floorRenderer.sortingOrder = FloorLayerBase + baseSortOrder;
+            _objectRenderer.sortingOrder = ObjectLayerBase + baseSortOrder;
             _wallRenderer.sortingOrder = WallLayerBase + baseSortOrder;
             _roofRenderer.sortingOrder = RoofLayerBase + baseSortOrder;
 
@@ -86,11 +96,13 @@ namespace Core.Game.Map.View
 
             DestroyMesh(_terrainFilter);
             DestroyMesh(_floorFilter);
+            DestroyMesh(_objectFilter);
             DestroyMesh(_wallFilter);
             DestroyMesh(_roofFilter);
 
             _terrainFilter.mesh = _meshBuilder.BuildTerrainMesh(_chunkData, _mapWidth, _mapHeight);
             _floorFilter.mesh = _meshBuilder.BuildFloorMesh(_chunkData, _mapWidth, _mapHeight);
+            _objectFilter.mesh = _meshBuilder.BuildObjectMesh(_chunkData, _itemModel, _chunkData.Floor);
             _wallFilter.mesh = _meshBuilder.BuildWallMesh(_chunkData, _mapWidth, _mapHeight);
             _roofFilter.mesh = _meshBuilder.BuildRoofMesh(_chunkData, _mapWidth, _mapHeight);
 
@@ -139,9 +151,11 @@ namespace Core.Game.Map.View
         public void Reset()
         {
             _chunkData = null;
+            _itemModel = null;
 
             DestroyMesh(_terrainFilter);
             DestroyMesh(_floorFilter);
+            DestroyMesh(_objectFilter);
             DestroyMesh(_wallFilter);
             DestroyMesh(_roofFilter);
 
@@ -155,6 +169,7 @@ namespace Core.Game.Map.View
         {
             _terrainFilter = CreateLayerChild("Terrain", baseMaterial, out _terrainRenderer);
             _floorFilter = CreateLayerChild("Floor", baseMaterial, out _floorRenderer);
+            _objectFilter = CreateLayerChild("Object", baseMaterial, out _objectRenderer);
             _wallFilter = CreateLayerChild("Wall", baseMaterial, out _wallRenderer);
             _roofFilter = CreateLayerChild("Roof", baseMaterial, out _roofRenderer);
         }
@@ -187,6 +202,7 @@ namespace Core.Game.Map.View
         {
             DestroyMesh(_terrainFilter);
             DestroyMesh(_floorFilter);
+            DestroyMesh(_objectFilter);
             DestroyMesh(_wallFilter);
             DestroyMesh(_roofFilter);
         }

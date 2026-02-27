@@ -42,6 +42,32 @@ namespace Core.Game.Map.Data
     }
 
     /// <summary>
+    /// 临时物品/家具定义
+    /// </summary>
+    public class ItemDef
+    {
+        public int Id;
+        public string Name;
+        public Color Color;
+        public int Width;
+        public int Height;
+        public bool BlocksMovement;
+        public int MaxHealth;
+    }
+
+    /// <summary>
+    /// 临时Pawn定义
+    /// </summary>
+    public class PawnDef
+    {
+        public int Id;
+        public string Name;
+        public Color Color;
+        public float MoveSpeed;
+        public float SpriteSize;
+    }
+
+    /// <summary>
     /// 临时配置数据提供器
     /// 硬编码配置数据，模拟Luban生成的结构
     /// </summary>
@@ -50,16 +76,22 @@ namespace Core.Game.Map.Data
         private static Dictionary<int, TerrainDef> _terrainDefs;
         private static Dictionary<int, FloorDef> _floorDefs;
         private static Dictionary<int, WallDef> _wallDefs;
+        private static Dictionary<int, PawnDef> _pawnDefs;
+        private static Dictionary<int, ItemDef> _itemDefs;
 
         private static TerrainDef _defaultTerrain;
         private static FloorDef _defaultFloor;
         private static WallDef _defaultWall;
+        private static PawnDef _defaultPawn;
+        private static ItemDef _defaultItem;
 
         static TempConfigProvider()
         {
             InitTerrainDefs();
             InitFloorDefs();
             InitWallDefs();
+            InitPawnDefs();
+            InitItemDefs();
         }
 
         private static void InitTerrainDefs()
@@ -201,6 +233,115 @@ namespace Core.Game.Map.Data
         public static WallDef GetWallDef(int id)
         {
             return _wallDefs.GetValueOrDefault(id, _defaultWall);
+        }
+
+        private static void InitPawnDefs()
+        {
+            _defaultPawn = new PawnDef
+            {
+                Id = 0, Name = "Unknown",
+                Color = Color.magenta, MoveSpeed = 2f, SpriteSize = 0.6f
+            };
+
+            _pawnDefs = new Dictionary<int, PawnDef>
+            {
+                {
+                    1, new PawnDef
+                    {
+                        Id = 1, Name = "Colonist",
+                        Color = new Color(0.3f, 0.5f, 0.9f), // 蓝
+                        MoveSpeed = 2f, SpriteSize = 0.6f
+                    }
+                },
+                {
+                    2, new PawnDef
+                    {
+                        Id = 2, Name = "Worker",
+                        Color = new Color(0.3f, 0.8f, 0.4f), // 绿
+                        MoveSpeed = 1.8f, SpriteSize = 0.6f
+                    }
+                },
+                {
+                    3, new PawnDef
+                    {
+                        Id = 3, Name = "Scout",
+                        Color = new Color(0.9f, 0.8f, 0.2f), // 黄
+                        MoveSpeed = 2.5f, SpriteSize = 0.55f
+                    }
+                },
+            };
+        }
+
+        public static PawnDef GetPawnDef(int id)
+        {
+            return _pawnDefs.GetValueOrDefault(id, _defaultPawn);
+        }
+
+        private static void InitItemDefs()
+        {
+            _defaultItem = new ItemDef
+            {
+                Id = 0, Name = "Unknown",
+                Color = Color.magenta, Width = 1, Height = 1,
+                BlocksMovement = false, MaxHealth = 100
+            };
+
+            _itemDefs = new Dictionary<int, ItemDef>
+            {
+                {
+                    1, new ItemDef
+                    {
+                        Id = 1, Name = "Bed",
+                        Color = new Color(0.55f, 0.35f, 0.20f), // 棕
+                        Width = 1, Height = 2, BlocksMovement = true, MaxHealth = 100
+                    }
+                },
+                {
+                    2, new ItemDef
+                    {
+                        Id = 2, Name = "Table",
+                        Color = new Color(0.45f, 0.30f, 0.15f), // 深棕
+                        Width = 2, Height = 2, BlocksMovement = true, MaxHealth = 150
+                    }
+                },
+                {
+                    3, new ItemDef
+                    {
+                        Id = 3, Name = "Chair",
+                        Color = new Color(0.70f, 0.55f, 0.35f), // 浅棕
+                        Width = 1, Height = 1, BlocksMovement = false, MaxHealth = 80
+                    }
+                },
+                {
+                    4, new ItemDef
+                    {
+                        Id = 4, Name = "StorageCrate",
+                        Color = new Color(0.55f, 0.55f, 0.55f), // 灰
+                        Width = 1, Height = 1, BlocksMovement = true, MaxHealth = 200
+                    }
+                },
+                {
+                    5, new ItemDef
+                    {
+                        Id = 5, Name = "Rug",
+                        Color = new Color(0.70f, 0.25f, 0.20f), // 红
+                        Width = 2, Height = 2, BlocksMovement = false, MaxHealth = 50
+                    }
+                },
+                {
+                    6, new ItemDef
+                    {
+                        Id = 6, Name = "Lamp",
+                        Color = new Color(0.90f, 0.85f, 0.40f), // 黄
+                        Width = 1, Height = 1, BlocksMovement = false, MaxHealth = 60
+                    }
+                },
+            };
+        }
+
+        public static ItemDef GetItemDef(int id)
+        {
+            return _itemDefs.GetValueOrDefault(id, _defaultItem);
         }
     }
 }

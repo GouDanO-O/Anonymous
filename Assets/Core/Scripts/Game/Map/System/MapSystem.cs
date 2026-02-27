@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
@@ -199,7 +200,8 @@ namespace Core.Game.Map.System
                 for (int x = 0; x < map.Width; x++)
                 {
                     var cell = map.GetCell(x, y, floor);
-                    if (cell == null || !cell.IsWalkable || cell.MoveCost == 0)
+                    if (cell == null || !cell.IsWalkable || cell.MoveCost == 0
+                        || cell.HasFlag(ECellFlags.Occupied))
                     {
                         grid[y][x] = 1; // 阻挡
                     }
@@ -225,8 +227,10 @@ namespace Core.Game.Map.System
             if (grid == null) return null;
 
             var map = _mapDataModel.CurrentMap;
+            int wallCheckFloor = floor;
             return Astar.instance.find(grid, map.Height, map.Width,
-                startX, startY, endX, endY, searchRadius);
+                startX, startY, endX, endY, searchRadius,
+                (fX, fY, tX, tY) => IsWallBlocking(fX, fY, tX, tY, wallCheckFloor));
         }
 
         /// <summary>
@@ -260,6 +264,18 @@ namespace Core.Game.Map.System
             {
                 var cell = map.GetCell(toX, toY, floor);
                 return cell != null && cell.WallWest.HasWall && !cell.WallWest.IsPassable;
+            }
+
+            // 对角线移动: 分解为两条L形路径, 两条都被墙挡住才算阻塞 (Rimworld惯例)
+            if (dx != 0 && dy != 0)
+            {
+                // L路径1: 先水平再垂直
+                bool path1Blocked = IsWallBlocking(fromX, fromY, fromX + dx, fromY, floor)
+                                 || IsWallBlocking(fromX + dx, fromY, toX, toY, floor);
+                // L路径2: 先垂直再水平
+                bool path2Blocked = IsWallBlocking(fromX, fromY, fromX, fromY + dy, floor)
+                                 || IsWallBlocking(fromX, fromY + dy, toX, toY, floor);
+                return path1Blocked && path2Blocked;
             }
 
             return false;

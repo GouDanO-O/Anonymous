@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Core.Game.Item.Define;
+using Core.Game.Item.Model;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using UnityEngine;
@@ -98,6 +100,56 @@ namespace Core.Game.Map.View
             });
 
             return CreateMesh("Roof");
+        }
+
+        /// <summary>
+        /// 构建物品/家具层Mesh
+        /// 只在锚点格绘制完整矩形, 避免重复
+        /// </summary>
+        public Mesh BuildObjectMesh(ChunkData chunk, ItemDataModel itemModel, int floor)
+        {
+            ClearBuffers();
+
+            if (itemModel == null) return null;
+
+            // 记录已绘制的物品ID, 避免多格物品重复绘制
+            var drawnItems = new HashSet<long>();
+
+            chunk.ForEachCell((cell, lx, ly) =>
+            {
+                if (cell.ObjectIds == null) return;
+
+                foreach (long objId in cell.ObjectIds)
+                {
+                    // 跳过非物品ID范围 (Pawn等)
+                    if (objId < ItemConst.ItemIdStart) continue;
+                    if (drawnItems.Contains(objId)) continue;
+
+                    var item = itemModel.GetItem(objId);
+                    if (item == null || item.Floor != floor) continue;
+
+                    // 只在锚点格所在chunk绘制
+                    if (item.AnchorX != cell.X || item.AnchorY != cell.Y) continue;
+
+                    drawnItems.Add(objId);
+
+                    var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+                    Color color = def.Color;
+                    if (!def.BlocksMovement)
+                        color.a = 0.5f; // 非阻挡物品半透明
+
+                    // 绘制矩形 (相对于chunk局部坐标)
+                    float rx = lx;
+                    float ry = ly;
+
+                    // 内缩一小圈, 和地板区分
+                    float padding = 0.05f;
+                    AddRect(rx + padding, ry + padding,
+                        rx + item.Width - padding, ry + item.Height - padding, color);
+                }
+            });
+
+            return CreateMesh("Object");
         }
 
         #region 内部方法

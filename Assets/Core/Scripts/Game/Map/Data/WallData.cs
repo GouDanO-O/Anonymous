@@ -31,7 +31,7 @@ namespace Core.Game.Map.Data
             get
             {
                 if (!HasWall) return true;
-                if (HasDoor && IsDoorOpen) return true;
+                if (HasDoor && DoorState != EDoorState.Locked) return true;
                 if (HasWindow && WindowState == EWindowState.Broken) return true;
                 return false;
             }

@@ -16,6 +16,11 @@ namespace GDFrameworkExtend.AStar
 
         private byte[][] mapdt;
 
+        /// <summary>
+        /// 可选回调: 检查从(fromX,fromY)到(toX,toY)的边是否被墙等障碍阻挡, 返回true=阻挡
+        /// </summary>
+        private Func<int, int, int, int, bool> _isTransitionBlocked;
+
         private int COL;
 
         private int ROW;
@@ -67,6 +72,10 @@ namespace GDFrameworkExtend.AStar
             if (Mathf.Abs(new_x - EndX) > limitR || Mathf.Abs(new_y - EndY) > limitR)
                 return;
             if (isBlock(new_x, new_y)) return;
+
+            // 检查边过渡是否被墙壁阻挡
+            if (_isTransitionBlocked != null && _isTransitionBlocked(grid.x, grid.y, new_x, new_y))
+                return;
 
             AsGrid newGrid = null;
 
@@ -155,6 +164,19 @@ namespace GDFrameworkExtend.AStar
             gridMap.Clear();
             openList.clear();
             return rst;
+        }
+
+        /// <summary>
+        /// 带边过渡检查的寻路 (用于墙壁/门等边界障碍)
+        /// </summary>
+        public List<AstarPosVo> find(byte[][] mapdata, int row, int col,
+            int start_x, int start_y, int end_x, int end_y, int limitR,
+            Func<int, int, int, int, bool> isTransitionBlocked)
+        {
+            _isTransitionBlocked = isTransitionBlocked;
+            var result = find(mapdata, row, col, start_x, start_y, end_x, end_y, limitR);
+            _isTransitionBlocked = null;
+            return result;
         }
     }
 }

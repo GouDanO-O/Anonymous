@@ -1,7 +1,11 @@
 using System.Collections.Generic;
+using Core.Game.Item.Model;
 using Core.Game.Map.Event;
 using Core.Game.Map.System;
 using Core.Game.Map.Utility;
+using Core.Game.Pawn.View;
+using Core.Game.Selection.View;
+using Core.Game.View;
 using GDFrameworkCore;
 using GDFrameworkExtend.LogKit;
 using UnityEngine;
@@ -111,6 +115,18 @@ namespace Core.Game.Map.View
                 _mainCamera.orthographicSize = 20f;
             }
 
+            // 确保PawnView存在
+            if (GetComponent<PawnView>() == null)
+                gameObject.AddComponent<PawnView>();
+
+            // 确保SelectionView存在
+            if (GetComponent<SelectionView>() == null)
+                gameObject.AddComponent<SelectionView>();
+
+            // 确保GameHudView存在
+            if (GetComponent<GameHudView>() == null)
+                gameObject.AddComponent<GameHudView>();
+
             // 强制刷新裁剪
             _cullingSystem.ForceRefresh();
 
@@ -147,7 +163,8 @@ namespace Core.Game.Map.View
 
                 var renderer = AllocateRenderer();
                 renderer.transform.SetParent(GetFloorContainer(key.z).transform, false);
-                renderer.Initialize(chunk, _meshBuilder, _baseMaterial, _mapWidth, _mapHeight);
+                var itemModel = this.GetModel<ItemDataModel>();
+                renderer.Initialize(chunk, _meshBuilder, _baseMaterial, _mapWidth, _mapHeight, itemModel);
                 renderer.SetVisible(true);
 
                 // 应用楼层可见性
