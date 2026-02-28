@@ -1,3 +1,5 @@
+using Core.Game.Blueprint.Model;
+using Core.Game.Blueprint.System;
 using Core.Game.Item.Model;
 using Core.Game.Item.System;
 using Core.Game.Map.Model;
@@ -5,6 +7,7 @@ using Core.Game.Map.System;
 using Core.Game.Pawn.Model;
 using Core.Game.Pawn.System;
 using Core.Game.Procedure.Models.Resource;
+using Core.Game.Resource.Model;
 using Core.Game.Selection.Model;
 using Core.Game.Selection.System;
 using GDFrameworkCore;
@@ -34,6 +37,10 @@ namespace Core.Game
             // Item模块
             this.RegisterSystem(new ItemSystem());
 
+            // Blueprint模块
+            this.RegisterSystem(new BlueprintSystem());
+            this.RegisterSystem(new ConstructionSystem());
+
             // Selection模块
             this.RegisterSystem(new SelectionSystem());
         }
@@ -47,6 +54,8 @@ namespace Core.Game
             this.RegisterModel(new PawnDataModel());
             this.RegisterModel(new ItemDataModel());
             this.RegisterModel(new SelectionDataModel());
+            this.RegisterModel(new MaterialDataModel());
+            this.RegisterModel(new BlueprintDataModel());
         }
 
         protected override void Register_Utility()

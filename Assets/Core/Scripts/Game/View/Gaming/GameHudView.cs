@@ -116,7 +116,14 @@ namespace Core.Game.View
             string walkable = cell.IsWalkable ? "可通行" : "不可通行";
             string room = cell.RoomId > 0 ? $"房间#{cell.RoomId}" : "户外";
 
-            _infoContent.text = $"地形: {terrain}\n地板: {floorType}\n{walkable} | {room}";
+            string structure = "无";
+            if (cell.HasStructure)
+            {
+                var sDef = TempConfigProvider.GetStructureDef(cell.StructureDefId);
+                structure = $"{sDef.Name} (HP:{cell.StructureHealth}/{sDef.MaxHealth})";
+            }
+
+            _infoContent.text = $"地形: {terrain}\n地板: {floorType}\n结构: {structure}\n{walkable} | {room}";
         }
 
         private void UpdatePawnInfo(long pawnId)
@@ -165,7 +172,9 @@ namespace Core.Game.View
                 2 => "泥土",
                 3 => "沙地",
                 4 => "石头",
-                5 => "水",
+                5 => "浅水",
+                6 => "深水",
+                7 => "地基",
                 _ => "未知"
             };
         }

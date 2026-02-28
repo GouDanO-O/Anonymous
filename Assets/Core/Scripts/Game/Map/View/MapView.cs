@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using Core.Game.Blueprint.Model;
 using Core.Game.Item.Model;
 using Core.Game.Map.Event;
 using Core.Game.Map.System;
 using Core.Game.Map.Utility;
 using Core.Game.Pawn.View;
+using Core.Game.Resource.Model;
 using Core.Game.Selection.View;
 using Core.Game.View;
 using GDFrameworkCore;
@@ -127,6 +129,10 @@ namespace Core.Game.Map.View
             if (GetComponent<GameHudView>() == null)
                 gameObject.AddComponent<GameHudView>();
 
+            // 确保BuildModeView存在
+            if (GetComponent<BuildModeView>() == null)
+                gameObject.AddComponent<BuildModeView>();
+
             // 强制刷新裁剪
             _cullingSystem.ForceRefresh();
 
@@ -164,7 +170,10 @@ namespace Core.Game.Map.View
                 var renderer = AllocateRenderer();
                 renderer.transform.SetParent(GetFloorContainer(key.z).transform, false);
                 var itemModel = this.GetModel<ItemDataModel>();
-                renderer.Initialize(chunk, _meshBuilder, _baseMaterial, _mapWidth, _mapHeight, itemModel);
+                var materialModel = this.GetModel<MaterialDataModel>();
+                var blueprintModel = this.GetModel<BlueprintDataModel>();
+                renderer.Initialize(chunk, _meshBuilder, _baseMaterial, _mapWidth, _mapHeight,
+                    itemModel, materialModel, blueprintModel);
                 renderer.SetVisible(true);
 
                 // 应用楼层可见性

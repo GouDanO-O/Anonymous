@@ -24,6 +24,10 @@ namespace Core.Game.Pawn.Define
         public const int WanderRadius = 15;
         public const int PathSearchRadius = 50;
 
+        // 施工
+        public const float ConstructionSpeed = 1.0f; // 每秒工作量
+        public const float DemolishSpeed = 1.5f; // 拆除比建造快
+
         // 渲染 (Wall=10000, Roof=15000之间)
         public const int PawnSortOrderBase = 12000;
     }

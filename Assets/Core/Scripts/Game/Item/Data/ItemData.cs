@@ -27,5 +27,10 @@ namespace Core.Game.Item.Data
         public int Rotation;
 
         public int Health;
+
+        /// <summary>
+        /// 是否已安装在地图上 (false = 已拆卸, 存在但不占格子)
+        /// </summary>
+        public bool IsInstalled = true;
     }
 }

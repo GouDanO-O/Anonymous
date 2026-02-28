@@ -50,6 +50,9 @@ namespace Core.Game.Item.System
                     // 需要有地板或地形
                     if (!cell.HasFloor && !cell.HasTerrain) return false;
 
+                    // 不能放在有结构(墙/门/窗)的格子上
+                    if (cell.HasStructure) return false;
+
                     // 如果要放阻挡物品, 目标格不能已经有阻挡物品
                     if (def.BlocksMovement && cell.HasFlag(ECellFlags.Occupied))
                         return false;
@@ -150,6 +153,101 @@ namespace Core.Game.Item.System
         }
 
         public ItemData GetItem(long itemId) => _itemModel.GetItem(itemId);
+
+        /// <summary>
+        /// 拆卸物品 (从格子中移除占用, 但保留ItemData)
+        /// </summary>
+        public void UninstallItem(long itemId)
+        {
+            var item = _itemModel.GetItem(itemId);
+            if (item == null || !item.IsInstalled) return;
+
+            var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+
+            for (int dy = 0; dy < item.Height; dy++)
+            {
+                for (int dx = 0; dx < item.Width; dx++)
+                {
+                    int cx = item.AnchorX + dx;
+                    int cy = item.AnchorY + dy;
+                    _mapSystem.RemoveObject(cx, cy, item.Floor, itemId);
+
+                    if (def.BlocksMovement)
+                    {
+                        var cell = _mapSystem.GetCell(cx, cy, item.Floor);
+                        cell?.SetFlag(ECellFlags.Occupied, false);
+                    }
+                }
+            }
+
+            if (def.BlocksMovement)
+                _mapDataModel.InvalidatePathGrid(item.Floor);
+
+            MarkChunksDirty(item.AnchorX, item.AnchorY, item.Width, item.Height, item.Floor);
+
+            item.IsInstalled = false;
+            LogKit.Log($"物品拆卸: [{itemId}] {def.Name} (保留数据, 可重装)");
+        }
+
+        /// <summary>
+        /// 重装物品 (使用已拆卸的物品, 放置到新位置)
+        /// </summary>
+        public bool ReinstallItem(long itemId, int x, int y, int floor, int rotation = 0)
+        {
+            var item = _itemModel.GetItem(itemId);
+            if (item == null || item.IsInstalled) return false;
+
+            var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+            GetRotatedSize(def.Width, def.Height, rotation, out int w, out int h);
+
+            // 验证新位置
+            for (int dy = 0; dy < h; dy++)
+            {
+                for (int dx = 0; dx < w; dx++)
+                {
+                    int cx = x + dx;
+                    int cy = y + dy;
+                    if (!_mapSystem.IsValidPosition(cx, cy, floor))
+                        return false;
+                    var cell = _mapSystem.GetCell(cx, cy, floor);
+                    if (cell == null || (!cell.HasFloor && !cell.HasTerrain))
+                        return false;
+                    if (def.BlocksMovement && cell.HasFlag(ECellFlags.Occupied))
+                        return false;
+                }
+            }
+
+            item.AnchorX = x;
+            item.AnchorY = y;
+            item.Floor = floor;
+            item.Width = w;
+            item.Height = h;
+            item.Rotation = rotation;
+            item.IsInstalled = true;
+
+            for (int dy = 0; dy < h; dy++)
+            {
+                for (int dx = 0; dx < w; dx++)
+                {
+                    int cx = x + dx;
+                    int cy = y + dy;
+                    _mapSystem.PlaceObject(cx, cy, floor, itemId);
+
+                    if (def.BlocksMovement)
+                    {
+                        var cell = _mapSystem.GetCell(cx, cy, floor);
+                        cell?.SetFlag(ECellFlags.Occupied, true);
+                    }
+                }
+            }
+
+            if (def.BlocksMovement)
+                _mapDataModel.InvalidatePathGrid(floor);
+
+            MarkChunksDirty(x, y, w, h, floor);
+            LogKit.Log($"物品重装: [{itemId}] {def.Name} → ({x},{y},F{floor})");
+            return true;
+        }
 
         #region 工具方法
 

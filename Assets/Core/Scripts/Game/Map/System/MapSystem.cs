@@ -108,45 +108,88 @@ namespace Core.Game.Map.System
 
         #endregion
 
-        #region 墙壁操作
+        #region 结构操作
 
         /// <summary>
-        /// 设置墙壁
+        /// 设置结构 (墙/门/窗)
         /// </summary>
-        public void SetWall(int x, int y, int floor, EWallSegment segment, WallData wall)
+        public void SetStructure(int x, int y, int floor, int structureDefId, int health = -1)
         {
             var cell = _mapDataModel.GetCell(x, y, floor);
             if (cell == null) return;
 
-            if (segment == EWallSegment.North)
-                cell.WallNorth = wall;
-            else
-                cell.WallWest = wall;
+            var def = TempConfigProvider.GetStructureDef(structureDefId);
+            if (health < 0) health = def.MaxHealth;
+
+            cell.StructureDefId = structureDefId;
+            cell.StructureHealth = health;
+
+            // 门默认关闭
+            cell.DoorState = def.StructureType == EStructureType.Door
+                ? EDoorState.Closed
+                : EDoorState.None;
+
+            // 墙/窗阻挡移动
+            if (def.BlocksMovement)
+            {
+                cell.SetFlag(ECellFlags.Walkable, false);
+                cell.MoveCost = 0;
+            }
 
             _mapDataModel.CurrentMap.MarkCellDirty(x, y, floor);
             _mapDataModel.InvalidatePathGrid(floor);
             this.SendEvent(new SCellChangedEvent(x, y, floor));
-
-            // 墙壁变更需要重新计算房间
             _roomSystem.RecalculateRooms(floor);
         }
 
         /// <summary>
-        /// 移除墙壁
+        /// 移除结构
         /// </summary>
-        public void RemoveWall(int x, int y, int floor, EWallSegment segment)
+        public void RemoveStructure(int x, int y, int floor)
         {
-            SetWall(x, y, floor, segment, WallData.Empty);
+            var cell = _mapDataModel.GetCell(x, y, floor);
+            if (cell == null || !cell.HasStructure) return;
+
+            cell.StructureDefId = MapConst.InvalidDefId;
+            cell.DoorState = EDoorState.None;
+            cell.StructureHealth = 0;
+
+            // 恢复可通行 (如果有地形或地板)
+            if (cell.HasTerrain || cell.HasFloor)
+            {
+                cell.SetFlag(ECellFlags.Walkable, true);
+                cell.MoveCost = 1;
+            }
+
+            _mapDataModel.CurrentMap.MarkCellDirty(x, y, floor);
+            _mapDataModel.InvalidatePathGrid(floor);
+            this.SendEvent(new SCellChangedEvent(x, y, floor));
+            _roomSystem.RecalculateRooms(floor);
         }
 
         /// <summary>
-        /// 获取墙壁数据
+        /// 获取结构DefId
         /// </summary>
-        public WallData GetWall(int x, int y, int floor, EWallSegment segment)
+        public int GetStructure(int x, int y, int floor)
         {
             var cell = _mapDataModel.GetCell(x, y, floor);
-            if (cell == null) return WallData.Empty;
-            return segment == EWallSegment.North ? cell.WallNorth : cell.WallWest;
+            return cell?.StructureDefId ?? MapConst.InvalidDefId;
+        }
+
+        /// <summary>
+        /// 设置门状态
+        /// </summary>
+        public void SetDoorState(int x, int y, int floor, EDoorState state)
+        {
+            var cell = _mapDataModel.GetCell(x, y, floor);
+            if (cell == null || !cell.HasStructure) return;
+
+            var def = TempConfigProvider.GetStructureDef(cell.StructureDefId);
+            if (def.StructureType != EStructureType.Door) return;
+
+            cell.DoorState = state;
+            _mapDataModel.CurrentMap.MarkCellDirty(x, y, floor);
+            _mapDataModel.InvalidatePathGrid(floor);
         }
 
         #endregion
@@ -234,7 +277,8 @@ namespace Core.Game.Map.System
         }
 
         /// <summary>
-        /// 检查两个相邻Cell之间是否有墙阻隔
+        /// 检查目标Cell是否有结构阻挡移动
+        /// 格子占据式: 检查目标格是否有阻挡结构
         /// </summary>
         public bool IsWallBlocking(int fromX, int fromY, int toX, int toY, int floor = -1)
         {
@@ -242,43 +286,11 @@ namespace Core.Game.Map.System
             var map = _mapDataModel.CurrentMap;
             if (map == null) return false;
 
-            int dx = toX - fromX;
-            int dy = toY - fromY;
+            var targetCell = map.GetCell(toX, toY, floor);
+            if (targetCell == null) return false;
+            if (!targetCell.HasStructure) return false;
 
-            if (dy == 1 && dx == 0) // 向北
-            {
-                var cell = map.GetCell(fromX, fromY, floor);
-                return cell != null && cell.WallNorth.HasWall && !cell.WallNorth.IsPassable;
-            }
-            if (dy == -1 && dx == 0) // 向南
-            {
-                var cell = map.GetCell(toX, toY, floor);
-                return cell != null && cell.WallNorth.HasWall && !cell.WallNorth.IsPassable;
-            }
-            if (dx == -1 && dy == 0) // 向西
-            {
-                var cell = map.GetCell(fromX, fromY, floor);
-                return cell != null && cell.WallWest.HasWall && !cell.WallWest.IsPassable;
-            }
-            if (dx == 1 && dy == 0) // 向东
-            {
-                var cell = map.GetCell(toX, toY, floor);
-                return cell != null && cell.WallWest.HasWall && !cell.WallWest.IsPassable;
-            }
-
-            // 对角线移动: 分解为两条L形路径, 两条都被墙挡住才算阻塞 (Rimworld惯例)
-            if (dx != 0 && dy != 0)
-            {
-                // L路径1: 先水平再垂直
-                bool path1Blocked = IsWallBlocking(fromX, fromY, fromX + dx, fromY, floor)
-                                 || IsWallBlocking(fromX + dx, fromY, toX, toY, floor);
-                // L路径2: 先垂直再水平
-                bool path2Blocked = IsWallBlocking(fromX, fromY, fromX, fromY + dy, floor)
-                                 || IsWallBlocking(fromX, fromY + dy, toX, toY, floor);
-                return path1Blocked && path2Blocked;
-            }
-
-            return false;
+            return !targetCell.IsStructurePassable;
         }
 
         #endregion

@@ -71,9 +71,10 @@ namespace Core.Game.Map.System
                     else
                         cell.TerrainDefId = 4; // 石头
 
-                    cell.MoveCost = cell.TerrainDefId == 4 ? (byte)0 : (byte)1;
+                    var terrainDef = TempConfigProvider.GetTerrainDef(cell.TerrainDefId);
+                    cell.MoveCost = terrainDef.MoveCost;
                     cell.SetFlag(ECellFlags.Walkable, cell.MoveCost > 0);
-                    cell.SetFlag(ECellFlags.Buildable, cell.MoveCost > 0);
+                    cell.SetFlag(ECellFlags.Buildable, terrainDef.CanBuild);
                 }
             }
         }
@@ -100,9 +101,18 @@ namespace Core.Game.Map.System
                         y * scale + offsetY
                     );
 
-                    if (noise > waterThreshold)
+                    if (noise > waterThreshold && noise <= 0.78f)
                     {
-                        cell.TerrainDefId = 5; // 水
+                        // 浅水: 可涉水通过但速度慢, 不可直接建造(需先建地基)
+                        cell.TerrainDefId = 5; // ShallowWater
+                        cell.MoveCost = 3;
+                        cell.SetFlag(ECellFlags.Walkable, true);
+                        cell.SetFlag(ECellFlags.Buildable, false);
+                    }
+                    else if (noise > 0.78f)
+                    {
+                        // 深水: 不可通行, 不可建造
+                        cell.TerrainDefId = 6; // DeepWater
                         cell.MoveCost = 0;
                         cell.SetFlag(ECellFlags.Walkable, false);
                         cell.SetFlag(ECellFlags.Buildable, false);
@@ -120,6 +130,7 @@ namespace Core.Game.Map.System
             int centerY = mapData.Height / 2;
 
             // 中心主建筑 (较大, 石墙)
+            // wallStructureId: 1=WoodWall, 2=StoneWall
             GenerateBuilding(mapData, centerX - 6, centerY - 5, 12, 10, 2, 2, rng);
 
             // 周围4个小建筑
@@ -152,23 +163,32 @@ namespace Core.Game.Map.System
         }
 
         /// <summary>
-        /// 生成单个建筑
+        /// 生成单个建筑 (格子占据式)
+        /// 外圈格子放墙结构, 内部格子铺地板
         /// </summary>
         /// <param name="startX">左下角X</param>
         /// <param name="startY">左下角Y</param>
-        /// <param name="w">宽度</param>
-        /// <param name="h">高度</param>
-        /// <param name="wallDefId">墙壁类型ID</param>
+        /// <param name="w">总宽度 (含墙, 内部宽度=w-2)</param>
+        /// <param name="h">总高度 (含墙, 内部高度=h-2)</param>
+        /// <param name="wallStructureId">墙结构ID (1=WoodWall, 2=StoneWall)</param>
         /// <param name="floorDefId">地板类型ID</param>
         private void GenerateBuilding(MapData mapData, int startX, int startY,
-            int w, int h, int wallDefId, int floorDefId, Random rng)
+            int w, int h, int wallStructureId, int floorDefId, Random rng)
         {
-            // 边界检查
-            if (startX < 1 || startY < 1 ||
-                startX + w >= mapData.Width - 1 || startY + h >= mapData.Height - 1)
+            // 边界检查, 至少3x3才能有内部空间
+            if (w < 3 || h < 3) return;
+            if (startX < 0 || startY < 0 ||
+                startX + w > mapData.Width || startY + h > mapData.Height)
                 return;
 
-            // 铺设地板 + 四面墙
+            // 门和窗的结构ID (根据材质对应)
+            // WoodWall(1) → WoodDoor(3), WoodWindow(5)
+            // StoneWall(2) → StoneDoor(4), StoneWindow(6)
+            int doorStructureId = wallStructureId + 2;
+            int windowStructureId = wallStructureId + 4;
+
+            var wallDef = TempConfigProvider.GetStructureDef(wallStructureId);
+
             for (int y = startY; y < startY + h; y++)
             {
                 for (int x = startX; x < startX + w; x++)
@@ -177,37 +197,32 @@ namespace Core.Game.Map.System
                     if (cell == null) continue;
 
                     // 清除水体 (建筑压过水)
-                    if (cell.TerrainDefId == 5)
+                    if (cell.TerrainDefId == 5 || cell.TerrainDefId == 6)
                     {
                         cell.TerrainDefId = 2; // 改为泥土
+                    }
+
+                    bool isBorder = x == startX || x == startX + w - 1
+                                 || y == startY || y == startY + h - 1;
+
+                    if (isBorder)
+                    {
+                        // 外圈: 放置墙结构
+                        cell.StructureDefId = wallStructureId;
+                        cell.StructureHealth = wallDef.MaxHealth;
+                        cell.DoorState = EDoorState.None;
+                        cell.FloorDefId = floorDefId;
+                        cell.MoveCost = 0;
+                        cell.SetFlag(ECellFlags.Walkable, false);
+                        cell.SetFlag(ECellFlags.Buildable, false);
+                    }
+                    else
+                    {
+                        // 内部: 铺地板, 无结构
+                        cell.FloorDefId = floorDefId;
                         cell.MoveCost = 1;
                         cell.SetFlag(ECellFlags.Walkable, true);
-                    }
-
-                    cell.FloorDefId = floorDefId;
-
-                    // 北墙
-                    if (y == startY + h - 1)
-                        cell.WallNorth = WallData.Create(wallDefId);
-
-                    // 南墙 = startY-1行的WallNorth
-                    if (y == startY)
-                    {
-                        var belowCell = mapData.GetCell(x, startY - 1, 0);
-                        if (belowCell != null)
-                            belowCell.WallNorth = WallData.Create(wallDefId);
-                    }
-
-                    // 西墙
-                    if (x == startX)
-                        cell.WallWest = WallData.Create(wallDefId);
-
-                    // 东墙 = 右侧cell的WallWest
-                    if (x == startX + w - 1)
-                    {
-                        var eastCell = mapData.GetCell(startX + w, y, 0);
-                        if (eastCell != null)
-                            eastCell.WallWest = WallData.Create(wallDefId);
+                        cell.SetFlag(ECellFlags.Buildable, true);
                     }
 
                     cell.SetFlag(ECellFlags.Indoor, true);
@@ -215,18 +230,17 @@ namespace Core.Game.Map.System
                 }
             }
 
-            // 在南墙随机位置放一个门
+            // 在南墙随机位置放一个门 (不在角落)
             int doorX = startX + 1 + rng.Next(0, w - 2);
-            var doorBelowCell = mapData.GetCell(doorX, startY - 1, 0);
-            if (doorBelowCell != null)
+            var doorCell = mapData.GetCell(doorX, startY, 0);
+            if (doorCell != null)
             {
-                doorBelowCell.WallNorth = new WallData
-                {
-                    WallDefId = wallDefId,
-                    DoorState = EDoorState.Closed,
-                    WindowState = EWindowState.None,
-                    Health = 100
-                };
+                var doorDef = TempConfigProvider.GetStructureDef(doorStructureId);
+                doorCell.StructureDefId = doorStructureId;
+                doorCell.StructureHealth = doorDef.MaxHealth;
+                doorCell.DoorState = EDoorState.Closed;
+                doorCell.MoveCost = 1;
+                doorCell.SetFlag(ECellFlags.Walkable, true);
             }
 
             // 清除门口前方水体，确保入口可通行 (门前3格深, 左右各1格)
@@ -235,45 +249,45 @@ namespace Core.Game.Map.System
                 for (int ddx = -1; ddx <= 1; ddx++)
                 {
                     var entryCell = mapData.GetCell(doorX + ddx, startY + dy, 0);
-                    if (entryCell != null && entryCell.TerrainDefId == 5)
+                    if (entryCell != null && (entryCell.TerrainDefId == 5 || entryCell.TerrainDefId == 6))
                     {
                         entryCell.TerrainDefId = 2; // 泥土
                         entryCell.MoveCost = 1;
                         entryCell.SetFlag(ECellFlags.Walkable, true);
+                        entryCell.SetFlag(ECellFlags.Buildable, true);
                     }
                 }
             }
 
-            // 随机在北墙或东墙放一个窗
+            // 随机在北墙或东墙放一个窗 (不在角落)
             bool windowOnNorth = rng.Next(2) == 0;
-            if (windowOnNorth)
+            if (windowOnNorth && w > 2)
             {
                 int winX = startX + 1 + rng.Next(0, w - 2);
                 var winCell = mapData.GetCell(winX, startY + h - 1, 0);
                 if (winCell != null)
                 {
-                    winCell.WallNorth = new WallData
-                    {
-                        WallDefId = wallDefId,
-                        DoorState = EDoorState.None,
-                        WindowState = EWindowState.Closed,
-                        Health = 100
-                    };
+                    var winDef = TempConfigProvider.GetStructureDef(windowStructureId);
+                    winCell.StructureDefId = windowStructureId;
+                    winCell.StructureHealth = winDef.MaxHealth;
+                    winCell.DoorState = EDoorState.None;
+                    // 窗户阻挡移动但允许视线
+                    winCell.MoveCost = 0;
+                    winCell.SetFlag(ECellFlags.Walkable, false);
                 }
             }
-            else
+            else if (h > 2)
             {
                 int winY = startY + 1 + rng.Next(0, h - 2);
-                var winCell = mapData.GetCell(startX + w, winY, 0);
+                var winCell = mapData.GetCell(startX + w - 1, winY, 0);
                 if (winCell != null)
                 {
-                    winCell.WallWest = new WallData
-                    {
-                        WallDefId = wallDefId,
-                        DoorState = EDoorState.None,
-                        WindowState = EWindowState.Closed,
-                        Health = 100
-                    };
+                    var winDef = TempConfigProvider.GetStructureDef(windowStructureId);
+                    winCell.StructureDefId = windowStructureId;
+                    winCell.StructureHealth = winDef.MaxHealth;
+                    winCell.DoorState = EDoorState.None;
+                    winCell.MoveCost = 0;
+                    winCell.SetFlag(ECellFlags.Walkable, false);
                 }
             }
         }
@@ -295,9 +309,14 @@ namespace Core.Game.Map.System
             int h = 8;
 
             // 边界检查
-            if (startX < 1 || startY < 1 ||
-                startX + w >= mapData.Width - 1 || startY + h >= mapData.Height - 1)
+            if (startX < 0 || startY < 0 ||
+                startX + w > mapData.Width || startY + h > mapData.Height)
                 return;
+
+            int wallStructureId = 2; // 石墙
+            int doorStructureId = 4; // 石门
+            int windowStructureId = 6; // 石窗
+            var wallDef = TempConfigProvider.GetStructureDef(wallStructureId);
 
             for (int y = startY; y < startY + h; y++)
             {
@@ -306,31 +325,25 @@ namespace Core.Game.Map.System
                     var cell = mapData.GetCell(x, y, 1);
                     if (cell == null) continue;
 
-                    cell.FloorDefId = 2; // 石地板
                     cell.TerrainDefId = MapConst.InvalidDefId;
 
-                    // 北墙
-                    if (y == startY + h - 1)
-                        cell.WallNorth = WallData.Create(2); // 石墙
+                    bool isBorder = x == startX || x == startX + w - 1
+                                 || y == startY || y == startY + h - 1;
 
-                    // 南墙
-                    if (y == startY)
+                    if (isBorder)
                     {
-                        var belowCell = mapData.GetCell(x, startY - 1, 1);
-                        if (belowCell != null)
-                            belowCell.WallNorth = WallData.Create(2);
+                        cell.StructureDefId = wallStructureId;
+                        cell.StructureHealth = wallDef.MaxHealth;
+                        cell.DoorState = EDoorState.None;
+                        cell.FloorDefId = 2; // 石地板
+                        cell.MoveCost = 0;
+                        cell.SetFlag(ECellFlags.Walkable, false);
                     }
-
-                    // 西墙
-                    if (x == startX)
-                        cell.WallWest = WallData.Create(2);
-
-                    // 东墙
-                    if (x == startX + w - 1)
+                    else
                     {
-                        var eastCell = mapData.GetCell(startX + w, y, 1);
-                        if (eastCell != null)
-                            eastCell.WallWest = WallData.Create(2);
+                        cell.FloorDefId = 2; // 石地板
+                        cell.MoveCost = 1;
+                        cell.SetFlag(ECellFlags.Walkable, true);
                     }
 
                     cell.SetFlag(ECellFlags.Indoor, true);
@@ -338,32 +351,28 @@ namespace Core.Game.Map.System
                 }
             }
 
-            // 二楼门 (南墙)
-            int doorX = centerX;
-            var doorCell = mapData.GetCell(doorX, startY - 1, 1);
+            // 二楼门 (南墙中间)
+            var doorCell = mapData.GetCell(centerX, startY, 1);
             if (doorCell != null)
             {
-                doorCell.WallNorth = new WallData
-                {
-                    WallDefId = 2,
-                    DoorState = EDoorState.Closed,
-                    WindowState = EWindowState.None,
-                    Health = 100
-                };
+                var doorDef = TempConfigProvider.GetStructureDef(doorStructureId);
+                doorCell.StructureDefId = doorStructureId;
+                doorCell.StructureHealth = doorDef.MaxHealth;
+                doorCell.DoorState = EDoorState.Closed;
+                doorCell.MoveCost = 1;
+                doorCell.SetFlag(ECellFlags.Walkable, true);
             }
 
             // 二楼窗 (北墙中间)
-            int winX = centerX;
-            var winCell = mapData.GetCell(winX, startY + h - 1, 1);
+            var winCell = mapData.GetCell(centerX, startY + h - 1, 1);
             if (winCell != null)
             {
-                winCell.WallNorth = new WallData
-                {
-                    WallDefId = 2,
-                    DoorState = EDoorState.None,
-                    WindowState = EWindowState.Closed,
-                    Health = 100
-                };
+                var winDef = TempConfigProvider.GetStructureDef(windowStructureId);
+                winCell.StructureDefId = windowStructureId;
+                winCell.StructureHealth = winDef.MaxHealth;
+                winCell.DoorState = EDoorState.None;
+                winCell.MoveCost = 0;
+                winCell.SetFlag(ECellFlags.Walkable, false);
             }
 
             LogKit.Log($"二楼结构生成完成: ({startX},{startY}) - ({startX + w},{startY + h})");

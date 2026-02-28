@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using Core.Game.Map.Define;
+using Core.Game.Resource.Data;
+using Core.Game.Resource.Define;
 using UnityEngine;
 
 namespace Core.Game.Map.Data
@@ -13,6 +16,7 @@ namespace Core.Game.Map.Data
         public Color Color;
         public byte MoveCost;
         public float Fertility;
+        public bool CanBuild;
     }
 
     /// <summary>
@@ -28,17 +32,19 @@ namespace Core.Game.Map.Data
     }
 
     /// <summary>
-    /// 临时墙壁定义
+    /// 结构定义 (墙/门/窗 — 独占一格的建筑)
     /// </summary>
-    public class WallDef
+    public class StructureDef
     {
         public int Id;
         public string Name;
+        public EStructureType StructureType;
         public Color Color;
-        public Color DoorColor;
-        public Color WindowColor;
         public int MaxHealth;
         public bool IsTransparent;
+        public bool BlocksMovement;
+        public MaterialCost[] BuildCosts;
+        public MaterialCost[] DemolishReturns;
     }
 
     /// <summary>
@@ -53,6 +59,8 @@ namespace Core.Game.Map.Data
         public int Height;
         public bool BlocksMovement;
         public int MaxHealth;
+        public MaterialCost[] BuildCosts;
+        public MaterialCost[] DemolishReturns;
     }
 
     /// <summary>
@@ -75,13 +83,13 @@ namespace Core.Game.Map.Data
     {
         private static Dictionary<int, TerrainDef> _terrainDefs;
         private static Dictionary<int, FloorDef> _floorDefs;
-        private static Dictionary<int, WallDef> _wallDefs;
+        private static Dictionary<int, StructureDef> _structureDefs;
         private static Dictionary<int, PawnDef> _pawnDefs;
         private static Dictionary<int, ItemDef> _itemDefs;
 
         private static TerrainDef _defaultTerrain;
         private static FloorDef _defaultFloor;
-        private static WallDef _defaultWall;
+        private static StructureDef _defaultStructure;
         private static PawnDef _defaultPawn;
         private static ItemDef _defaultItem;
 
@@ -89,7 +97,7 @@ namespace Core.Game.Map.Data
         {
             InitTerrainDefs();
             InitFloorDefs();
-            InitWallDefs();
+            InitStructureDefs();
             InitPawnDefs();
             InitItemDefs();
         }
@@ -109,7 +117,7 @@ namespace Core.Game.Map.Data
                     {
                         Id = 1, Name = "Grass",
                         Color = new Color(0.42f, 0.60f, 0.30f),
-                        MoveCost = 1, Fertility = 1f
+                        MoveCost = 1, Fertility = 1f, CanBuild = true
                     }
                 },
                 {
@@ -117,7 +125,7 @@ namespace Core.Game.Map.Data
                     {
                         Id = 2, Name = "Dirt",
                         Color = new Color(0.55f, 0.40f, 0.25f),
-                        MoveCost = 1, Fertility = 0.5f
+                        MoveCost = 1, Fertility = 0.5f, CanBuild = true
                     }
                 },
                 {
@@ -125,7 +133,7 @@ namespace Core.Game.Map.Data
                     {
                         Id = 3, Name = "Sand",
                         Color = new Color(0.85f, 0.80f, 0.60f),
-                        MoveCost = 1, Fertility = 0.1f
+                        MoveCost = 1, Fertility = 0.1f, CanBuild = true
                     }
                 },
                 {
@@ -133,15 +141,31 @@ namespace Core.Game.Map.Data
                     {
                         Id = 4, Name = "Rock",
                         Color = new Color(0.50f, 0.50f, 0.50f),
-                        MoveCost = 0, Fertility = 0f
+                        MoveCost = 0, Fertility = 0f, CanBuild = false
                     }
                 },
                 {
                     5, new TerrainDef
                     {
-                        Id = 5, Name = "Water",
-                        Color = new Color(0.25f, 0.45f, 0.70f),
-                        MoveCost = 0, Fertility = 0f
+                        Id = 5, Name = "ShallowWater",
+                        Color = new Color(0.35f, 0.55f, 0.75f),
+                        MoveCost = 3, Fertility = 0f, CanBuild = false
+                    }
+                },
+                {
+                    6, new TerrainDef
+                    {
+                        Id = 6, Name = "DeepWater",
+                        Color = new Color(0.15f, 0.30f, 0.55f),
+                        MoveCost = 0, Fertility = 0f, CanBuild = false
+                    }
+                },
+                {
+                    7, new TerrainDef
+                    {
+                        Id = 7, Name = "Foundation",
+                        Color = new Color(0.60f, 0.55f, 0.45f),
+                        MoveCost = 1, Fertility = 0f, CanBuild = true
                     }
                 },
             };
@@ -184,37 +208,82 @@ namespace Core.Game.Map.Data
             };
         }
 
-        private static void InitWallDefs()
+        private static void InitStructureDefs()
         {
-            _defaultWall = new WallDef
+            _defaultStructure = new StructureDef
             {
                 Id = 0, Name = "Unknown",
+                StructureType = EStructureType.Wall,
                 Color = Color.magenta,
-                DoorColor = Color.magenta,
-                WindowColor = Color.magenta,
-                MaxHealth = 100, IsTransparent = false
+                MaxHealth = 100, IsTransparent = false, BlocksMovement = true
             };
 
-            _wallDefs = new Dictionary<int, WallDef>
+            _structureDefs = new Dictionary<int, StructureDef>
             {
                 {
-                    1, new WallDef
+                    1, new StructureDef
                     {
                         Id = 1, Name = "WoodWall",
+                        StructureType = EStructureType.Wall,
                         Color = new Color(0.75f, 0.75f, 0.70f),
-                        DoorColor = new Color(0.50f, 0.35f, 0.20f),
-                        WindowColor = new Color(0.60f, 0.80f, 0.90f),
-                        MaxHealth = 100, IsTransparent = false
+                        MaxHealth = 100, IsTransparent = false, BlocksMovement = true,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 5) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 3) }
                     }
                 },
                 {
-                    2, new WallDef
+                    2, new StructureDef
                     {
                         Id = 2, Name = "StoneWall",
+                        StructureType = EStructureType.Wall,
                         Color = new Color(0.60f, 0.58f, 0.55f),
-                        DoorColor = new Color(0.45f, 0.30f, 0.15f),
-                        WindowColor = new Color(0.55f, 0.75f, 0.85f),
-                        MaxHealth = 200, IsTransparent = false
+                        MaxHealth = 200, IsTransparent = false, BlocksMovement = true,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 5) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 3) }
+                    }
+                },
+                {
+                    3, new StructureDef
+                    {
+                        Id = 3, Name = "WoodDoor",
+                        StructureType = EStructureType.Door,
+                        Color = new Color(0.50f, 0.35f, 0.20f),
+                        MaxHealth = 80, IsTransparent = false, BlocksMovement = false,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 5) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 3) }
+                    }
+                },
+                {
+                    4, new StructureDef
+                    {
+                        Id = 4, Name = "StoneDoor",
+                        StructureType = EStructureType.Door,
+                        Color = new Color(0.45f, 0.30f, 0.15f),
+                        MaxHealth = 150, IsTransparent = false, BlocksMovement = false,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 5) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 3) }
+                    }
+                },
+                {
+                    5, new StructureDef
+                    {
+                        Id = 5, Name = "WoodWindow",
+                        StructureType = EStructureType.Window,
+                        Color = new Color(0.60f, 0.80f, 0.90f),
+                        MaxHealth = 60, IsTransparent = true, BlocksMovement = true,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 2) }
+                    }
+                },
+                {
+                    6, new StructureDef
+                    {
+                        Id = 6, Name = "StoneWindow",
+                        StructureType = EStructureType.Window,
+                        Color = new Color(0.55f, 0.75f, 0.85f),
+                        MaxHealth = 100, IsTransparent = true, BlocksMovement = true,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 2) }
                     }
                 },
             };
@@ -230,9 +299,9 @@ namespace Core.Game.Map.Data
             return _floorDefs.GetValueOrDefault(id, _defaultFloor);
         }
 
-        public static WallDef GetWallDef(int id)
+        public static StructureDef GetStructureDef(int id)
         {
-            return _wallDefs.GetValueOrDefault(id, _defaultWall);
+            return _structureDefs.GetValueOrDefault(id, _defaultStructure);
         }
 
         private static void InitPawnDefs()
@@ -292,48 +361,60 @@ namespace Core.Game.Map.Data
                     1, new ItemDef
                     {
                         Id = 1, Name = "Bed",
-                        Color = new Color(0.55f, 0.35f, 0.20f), // 棕
-                        Width = 1, Height = 2, BlocksMovement = true, MaxHealth = 100
+                        Color = new Color(0.55f, 0.35f, 0.20f),
+                        Width = 1, Height = 2, BlocksMovement = true, MaxHealth = 100,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 10) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 6) }
                     }
                 },
                 {
                     2, new ItemDef
                     {
                         Id = 2, Name = "Table",
-                        Color = new Color(0.45f, 0.30f, 0.15f), // 深棕
-                        Width = 2, Height = 2, BlocksMovement = true, MaxHealth = 150
+                        Color = new Color(0.45f, 0.30f, 0.15f),
+                        Width = 2, Height = 2, BlocksMovement = true, MaxHealth = 150,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 15) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 9) }
                     }
                 },
                 {
                     3, new ItemDef
                     {
                         Id = 3, Name = "Chair",
-                        Color = new Color(0.70f, 0.55f, 0.35f), // 浅棕
-                        Width = 1, Height = 1, BlocksMovement = false, MaxHealth = 80
+                        Color = new Color(0.70f, 0.55f, 0.35f),
+                        Width = 1, Height = 1, BlocksMovement = false, MaxHealth = 80,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 5) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 3) }
                     }
                 },
                 {
                     4, new ItemDef
                     {
                         Id = 4, Name = "StorageCrate",
-                        Color = new Color(0.55f, 0.55f, 0.55f), // 灰
-                        Width = 1, Height = 1, BlocksMovement = true, MaxHealth = 200
+                        Color = new Color(0.55f, 0.55f, 0.55f),
+                        Width = 1, Height = 1, BlocksMovement = true, MaxHealth = 200,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 8) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 5) }
                     }
                 },
                 {
                     5, new ItemDef
                     {
                         Id = 5, Name = "Rug",
-                        Color = new Color(0.70f, 0.25f, 0.20f), // 红
-                        Width = 2, Height = 2, BlocksMovement = false, MaxHealth = 50
+                        Color = new Color(0.70f, 0.25f, 0.20f),
+                        Width = 2, Height = 2, BlocksMovement = false, MaxHealth = 50,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 2) }
                     }
                 },
                 {
                     6, new ItemDef
                     {
                         Id = 6, Name = "Lamp",
-                        Color = new Color(0.90f, 0.85f, 0.40f), // 黄
-                        Width = 1, Height = 1, BlocksMovement = false, MaxHealth = 60
+                        Color = new Color(0.90f, 0.85f, 0.40f),
+                        Width = 1, Height = 1, BlocksMovement = false, MaxHealth = 60,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Steel, 3) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Steel, 2) }
                     }
                 },
             };

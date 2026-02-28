@@ -31,6 +31,7 @@ namespace Core.Game.Pawn.Data
 
         // AI
         public float StateTimer;
+        public long CurrentBlueprintId;
 
         /// <summary>
         /// 是否正在移动中

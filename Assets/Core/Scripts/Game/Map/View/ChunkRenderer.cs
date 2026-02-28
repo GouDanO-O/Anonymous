@@ -1,21 +1,25 @@
+using Core.Game.Blueprint.Model;
 using Core.Game.Item.Define;
 using Core.Game.Item.Model;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using Core.Game.Map.Utility;
+using Core.Game.Resource.Model;
 using UnityEngine;
 
 namespace Core.Game.Map.View
 {
     /// <summary>
     /// 单个Chunk的渲染器
-    /// 管理5个子Mesh (地形/地板/物品/墙/屋顶)
+    /// 管理6个子Mesh (地形/地板/物品/墙/屋顶/蓝图)
     /// </summary>
     public class ChunkRenderer : MonoBehaviour
     {
         private ChunkData _chunkData;
         private ChunkMeshBuilder _meshBuilder;
         private ItemDataModel _itemModel;
+        private MaterialDataModel _materialModel;
+        private BlueprintDataModel _blueprintModel;
         private int _mapWidth;
         private int _mapHeight;
 
@@ -35,6 +39,9 @@ namespace Core.Game.Map.View
         private MeshFilter _roofFilter;
         private MeshRenderer _roofRenderer;
 
+        private MeshFilter _blueprintFilter;
+        private MeshRenderer _blueprintRenderer;
+
         // 材质实例 (用于alpha控制)
         private MaterialPropertyBlock _wallPropBlock;
         private MaterialPropertyBlock _roofPropBlock;
@@ -51,14 +58,18 @@ namespace Core.Game.Map.View
         private const int ObjectLayerBase = ItemConst.ItemSortOrderBase; // 7500
         private const int WallLayerBase = SortOrderLayerOffset * 2;
         private const int RoofLayerBase = SortOrderLayerOffset * 3;
+        private const int BlueprintLayerBase = 17500; // Roof(15000)之上
 
         public void Initialize(ChunkData chunkData, ChunkMeshBuilder meshBuilder,
             Material baseMaterial, int mapWidth, int mapHeight,
-            ItemDataModel itemModel = null)
+            ItemDataModel itemModel = null, MaterialDataModel materialModel = null,
+            BlueprintDataModel blueprintModel = null)
         {
             _chunkData = chunkData;
             _meshBuilder = meshBuilder;
             _itemModel = itemModel;
+            _materialModel = materialModel;
+            _blueprintModel = blueprintModel;
             _mapWidth = mapWidth;
             _mapHeight = mapHeight;
 
@@ -83,6 +94,7 @@ namespace Core.Game.Map.View
             _objectRenderer.sortingOrder = ObjectLayerBase + baseSortOrder;
             _wallRenderer.sortingOrder = WallLayerBase + baseSortOrder;
             _roofRenderer.sortingOrder = RoofLayerBase + baseSortOrder;
+            _blueprintRenderer.sortingOrder = BlueprintLayerBase + baseSortOrder;
 
             RebuildMeshes();
         }
@@ -99,12 +111,14 @@ namespace Core.Game.Map.View
             DestroyMesh(_objectFilter);
             DestroyMesh(_wallFilter);
             DestroyMesh(_roofFilter);
+            DestroyMesh(_blueprintFilter);
 
             _terrainFilter.mesh = _meshBuilder.BuildTerrainMesh(_chunkData, _mapWidth, _mapHeight);
             _floorFilter.mesh = _meshBuilder.BuildFloorMesh(_chunkData, _mapWidth, _mapHeight);
-            _objectFilter.mesh = _meshBuilder.BuildObjectMesh(_chunkData, _itemModel, _chunkData.Floor);
+            _objectFilter.mesh = _meshBuilder.BuildObjectMesh(_chunkData, _itemModel, _materialModel, _chunkData.Floor);
             _wallFilter.mesh = _meshBuilder.BuildWallMesh(_chunkData, _mapWidth, _mapHeight);
             _roofFilter.mesh = _meshBuilder.BuildRoofMesh(_chunkData, _mapWidth, _mapHeight);
+            _blueprintFilter.mesh = _meshBuilder.BuildBlueprintMesh(_chunkData, _blueprintModel, _chunkData.Floor);
 
             _chunkData.ClearDirty();
         }
@@ -152,12 +166,15 @@ namespace Core.Game.Map.View
         {
             _chunkData = null;
             _itemModel = null;
+            _materialModel = null;
+            _blueprintModel = null;
 
             DestroyMesh(_terrainFilter);
             DestroyMesh(_floorFilter);
             DestroyMesh(_objectFilter);
             DestroyMesh(_wallFilter);
             DestroyMesh(_roofFilter);
+            DestroyMesh(_blueprintFilter);
 
             SetWallAlpha(1f);
             SetRoofAlpha(1f);
@@ -172,6 +189,7 @@ namespace Core.Game.Map.View
             _objectFilter = CreateLayerChild("Object", baseMaterial, out _objectRenderer);
             _wallFilter = CreateLayerChild("Wall", baseMaterial, out _wallRenderer);
             _roofFilter = CreateLayerChild("Roof", baseMaterial, out _roofRenderer);
+            _blueprintFilter = CreateLayerChild("Blueprint", baseMaterial, out _blueprintRenderer);
         }
 
         private MeshFilter CreateLayerChild(string layerName, Material material,
@@ -205,6 +223,7 @@ namespace Core.Game.Map.View
             DestroyMesh(_objectFilter);
             DestroyMesh(_wallFilter);
             DestroyMesh(_roofFilter);
+            DestroyMesh(_blueprintFilter);
         }
     }
 }

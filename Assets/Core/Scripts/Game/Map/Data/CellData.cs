@@ -25,14 +25,19 @@ namespace Core.Game.Map.Data
         public int FloorDefId;
 
         /// <summary>
-        /// 北边墙体 (本Cell拥有)
+        /// 结构 (墙/门/窗), 独占一格, 0 = 无结构
         /// </summary>
-        public WallData WallNorth;
+        public int StructureDefId;
 
         /// <summary>
-        /// 西边墙体 (本Cell拥有)
+        /// 门状态 (仅当结构类型为Door时有意义)
         /// </summary>
-        public WallData WallWest;
+        public EDoorState DoorState;
+
+        /// <summary>
+        /// 结构耐久
+        /// </summary>
+        public int StructureHealth;
 
         /// <summary>
         /// 本格上的物体实体ID列表
@@ -60,6 +65,22 @@ namespace Core.Game.Map.Data
         public bool IsBuildable => (Flags & ECellFlags.Buildable) != 0;
         public bool HasTerrain => TerrainDefId != MapConst.InvalidDefId;
         public bool HasFloor => FloorDefId != MapConst.InvalidDefId;
+        public bool HasStructure => StructureDefId != MapConst.InvalidDefId;
+
+        /// <summary>
+        /// 结构是否允许通行 (无结构=可通行, 门=非锁定时可通行, 墙/窗=不可通行)
+        /// </summary>
+        public bool IsStructurePassable
+        {
+            get
+            {
+                if (!HasStructure) return true;
+                var def = TempConfigProvider.GetStructureDef(StructureDefId);
+                if (def.StructureType == EStructureType.Door)
+                    return DoorState != EDoorState.Locked;
+                return !def.BlocksMovement;
+            }
+        }
 
         public CellData(int x, int y, int z)
         {
@@ -68,8 +89,9 @@ namespace Core.Game.Map.Data
             Z = z;
             TerrainDefId = MapConst.InvalidDefId;
             FloorDefId = MapConst.InvalidDefId;
-            WallNorth = WallData.Empty;
-            WallWest = WallData.Empty;
+            StructureDefId = MapConst.InvalidDefId;
+            DoorState = EDoorState.None;
+            StructureHealth = 0;
             ObjectIds = null;
             Flags = ECellFlags.None;
             RoomId = MapConst.InvalidRoomId;

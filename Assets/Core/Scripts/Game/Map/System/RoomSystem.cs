@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
-using Core.Game.Map.Event;
 using Core.Game.Map.Model;
 using GDFrameworkCore;
 using GDFrameworkExtend.LogKit;
@@ -11,6 +10,7 @@ namespace Core.Game.Map.System
 {
     /// <summary>
     /// 房间检测系统 (洪水填充)
+    /// 格子占据式: 有结构(墙/门/窗)的格子是边界, 无结构的Indoor格子组成房间
     /// </summary>
     public class RoomSystem : AbstractSystem
     {
@@ -46,7 +46,7 @@ namespace Core.Game.Map.System
                 }
             }
 
-            // 洪水填充: 从每个未访问的室内Cell开始
+            // 洪水填充: 从每个未访问的室内且无结构的Cell开始
             for (int y = 0; y < map.Height; y++)
             {
                 for (int x = 0; x < map.Width; x++)
@@ -54,13 +54,13 @@ namespace Core.Game.Map.System
                     if (visited[y, x]) continue;
 
                     var cell = map.GetCell(x, y, floor);
-                    if (cell == null || !cell.IsIndoor)
+                    if (cell == null || !cell.IsIndoor || cell.HasStructure)
                     {
                         visited[y, x] = true;
                         continue;
                     }
 
-                    // 发现未访问的室内Cell，开始洪水填充新房间
+                    // 发现未访问的室内无结构Cell，开始洪水填充新房间
                     int roomId = floorRoomData.CreateRoom(floor);
                     var room = floorRoomData.GetRoom(roomId);
                     bool isEnclosed = true;
@@ -82,6 +82,8 @@ namespace Core.Game.Map.System
 
         /// <summary>
         /// 洪水填充单个房间
+        /// 规则: 有阻挡结构(墙/窗)的格子是边界不可扩展,
+        ///       门也是边界(门分隔房间), 无结构的Indoor格子加入房间
         /// </summary>
         private void FloodFillRoom(MapData map, int floor, int startX, int startY,
             int roomId, RoomData room, bool[,] visited, ref bool isEnclosed)
@@ -106,84 +108,25 @@ namespace Core.Game.Map.System
                 var cell = map.GetCell(x, y, floor);
                 if (cell == null) continue;
 
+                // 有结构的格子是边界, 不扩展进去
+                if (cell.HasStructure) continue;
+
                 if (!cell.IsIndoor)
                 {
-                    // 到达非室内区域，检查是否有墙阻隔
-                    // 如果没有墙阻隔就到达了室外，说明房间不封闭
+                    // 到达非室内区域且无结构阻隔, 房间不封闭
+                    isEnclosed = false;
                     continue;
                 }
 
                 cell.RoomId = roomId;
                 room.AddCell(x, y);
 
-                // 检查四个方向
-                TryExpandRoom(map, floor, x, y, x, y + 1, true, queue, visited, ref isEnclosed);  // 北
-                TryExpandRoom(map, floor, x, y, x, y - 1, false, queue, visited, ref isEnclosed); // 南
-                TryExpandRoom(map, floor, x, y, x + 1, y, false, queue, visited, ref isEnclosed); // 东
-                TryExpandRoom(map, floor, x, y, x - 1, y, true, queue, visited, ref isEnclosed);  // 西
+                // 向四个方向扩展
+                queue.Enqueue(new Vector2Int(x, y + 1)); // 北
+                queue.Enqueue(new Vector2Int(x, y - 1)); // 南
+                queue.Enqueue(new Vector2Int(x + 1, y)); // 东
+                queue.Enqueue(new Vector2Int(x - 1, y)); // 西
             }
-        }
-
-        /// <summary>
-        /// 尝试向相邻格子扩展房间
-        /// </summary>
-        private void TryExpandRoom(MapData map, int floor,
-            int fromX, int fromY, int toX, int toY,
-            bool checkFromCellWall, Queue<Vector2Int> queue, bool[,] visited,
-            ref bool isEnclosed)
-        {
-            if (toX < 0 || toX >= map.Width || toY < 0 || toY >= map.Height)
-            {
-                isEnclosed = false;
-                return;
-            }
-
-            if (visited[toY, toX]) return;
-
-            // 检查两个Cell之间是否有墙阻隔
-            if (IsWallBlocking(map, floor, fromX, fromY, toX, toY))
-                return; // 有墙阻隔，不扩展
-
-            queue.Enqueue(new Vector2Int(toX, toY));
-        }
-
-        /// <summary>
-        /// 检查两个相邻Cell之间是否有不可通过的墙
-        /// </summary>
-        private bool IsWallBlocking(MapData map, int floor, int fromX, int fromY, int toX, int toY)
-        {
-            int dx = toX - fromX;
-            int dy = toY - fromY;
-
-            // 向北移动 (dy=+1): 检查from cell的WallNorth
-            if (dy == 1 && dx == 0)
-            {
-                var cell = map.GetCell(fromX, fromY, floor);
-                return cell != null && cell.WallNorth.HasWall && !cell.WallNorth.IsPassable;
-            }
-
-            // 向南移动 (dy=-1): 检查to cell的WallNorth
-            if (dy == -1 && dx == 0)
-            {
-                var cell = map.GetCell(toX, toY, floor);
-                return cell != null && cell.WallNorth.HasWall && !cell.WallNorth.IsPassable;
-            }
-
-            // 向西移动 (dx=-1): 检查from cell的WallWest
-            if (dx == -1 && dy == 0)
-            {
-                var cell = map.GetCell(fromX, fromY, floor);
-                return cell != null && cell.WallWest.HasWall && !cell.WallWest.IsPassable;
-            }
-
-            // 向东移动 (dx=+1): 检查to cell的WallWest
-            if (dx == 1 && dy == 0)
-            {
-                var cell = map.GetCell(toX, toY, floor);
-                return cell != null && cell.WallWest.HasWall && !cell.WallWest.IsPassable;
-            }
-
-            return false;
         }
 
         /// <summary>

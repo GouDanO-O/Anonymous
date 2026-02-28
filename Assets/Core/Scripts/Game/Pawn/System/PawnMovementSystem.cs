@@ -148,16 +148,22 @@ namespace Core.Game.Pawn.System
         {
             var oldState = pawn.State;
             pawn.ClearPath();
-            pawn.State = EPawnState.Idle;
+
+            // 如果有蓝图任务, 进入Working状态
+            EPawnState newState = pawn.CurrentBlueprintId != 0
+                ? EPawnState.Working
+                : EPawnState.Idle;
+
+            pawn.State = newState;
             pawn.StateTimer = 0f;
 
-            if (oldState != EPawnState.Idle)
+            if (oldState != newState)
             {
                 this.SendEvent(new SPawnStateChangedEvent
                 {
                     PawnId = pawn.PawnId,
                     OldState = oldState,
-                    NewState = EPawnState.Idle
+                    NewState = newState
                 });
             }
         }
