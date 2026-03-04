@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Core.Game.Map.Define;
 using Core.Game.Resource.Data;
 using Core.Game.Resource.Define;
@@ -29,6 +30,8 @@ namespace Core.Game.Map.Data
         public Color Color;
         public byte MoveCost;
         public int Beauty;
+        public MaterialCost[] BuildCosts;
+        public MaterialCost[] DemolishReturns;
     }
 
     /// <summary>
@@ -186,7 +189,9 @@ namespace Core.Game.Map.Data
                     {
                         Id = 1, Name = "WoodFloor",
                         Color = new Color(0.65f, 0.50f, 0.30f),
-                        MoveCost = 1, Beauty = 1
+                        MoveCost = 1, Beauty = 1,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 2) }
                     }
                 },
                 {
@@ -194,7 +199,9 @@ namespace Core.Game.Map.Data
                     {
                         Id = 2, Name = "StoneFloor",
                         Color = new Color(0.70f, 0.70f, 0.70f),
-                        MoveCost = 1, Beauty = 2
+                        MoveCost = 1, Beauty = 2,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 2) }
                     }
                 },
                 {
@@ -202,7 +209,9 @@ namespace Core.Game.Map.Data
                     {
                         Id = 3, Name = "TileFloor",
                         Color = new Color(0.80f, 0.75f, 0.65f),
-                        MoveCost = 1, Beauty = 3
+                        MoveCost = 1, Beauty = 3,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 3), new MaterialCost(EMaterialType.Wood, 2) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 2) }
                     }
                 },
             };
@@ -286,6 +295,50 @@ namespace Core.Game.Map.Data
                         DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 2) }
                     }
                 },
+                {
+                    7, new StructureDef
+                    {
+                        Id = 7, Name = "WoodPillar",
+                        StructureType = EStructureType.Pillar,
+                        Color = new Color(0.65f, 0.50f, 0.35f),
+                        MaxHealth = 80, IsTransparent = true, BlocksMovement = false,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 2) }
+                    }
+                },
+                {
+                    8, new StructureDef
+                    {
+                        Id = 8, Name = "StonePillar",
+                        StructureType = EStructureType.Pillar,
+                        Color = new Color(0.55f, 0.55f, 0.55f),
+                        MaxHealth = 150, IsTransparent = true, BlocksMovement = false,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 4) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 2) }
+                    }
+                },
+                {
+                    9, new StructureDef
+                    {
+                        Id = 9, Name = "WoodStair",
+                        StructureType = EStructureType.Stair,
+                        Color = new Color(0.70f, 0.55f, 0.30f),
+                        MaxHealth = 100, IsTransparent = true, BlocksMovement = false,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Wood, 8) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Wood, 5) }
+                    }
+                },
+                {
+                    10, new StructureDef
+                    {
+                        Id = 10, Name = "StoneStair",
+                        StructureType = EStructureType.Stair,
+                        Color = new Color(0.60f, 0.60f, 0.60f),
+                        MaxHealth = 180, IsTransparent = true, BlocksMovement = false,
+                        BuildCosts = new[] { new MaterialCost(EMaterialType.Stone, 8) },
+                        DemolishReturns = new[] { new MaterialCost(EMaterialType.Stone, 5) }
+                    }
+                },
             };
         }
 
@@ -303,6 +356,18 @@ namespace Core.Game.Map.Data
         {
             return _structureDefs.GetValueOrDefault(id, _defaultStructure);
         }
+
+        // 地基建造/拆除成本 (不走StructureDef, 地基改变地形而非放置结构)
+        public static readonly MaterialCost[] FoundationBuildCosts =
+            { new MaterialCost(EMaterialType.Stone, 3) };
+        public static readonly MaterialCost[] FoundationDemolishReturns =
+            { new MaterialCost(EMaterialType.Stone, 2) };
+
+        // 屋顶建造/拆除成本
+        public static readonly MaterialCost[] RoofBuildCosts =
+            { new MaterialCost(EMaterialType.Wood, 3) };
+        public static readonly MaterialCost[] RoofDemolishReturns =
+            { new MaterialCost(EMaterialType.Wood, 1) };
 
         private static void InitPawnDefs()
         {
@@ -424,5 +489,12 @@ namespace Core.Game.Map.Data
         {
             return _itemDefs.GetValueOrDefault(id, _defaultItem);
         }
+
+        // ---- 遍历所有已注册DefId (供TileAtlasManager使用) ----
+        public static IEnumerable<int> GetAllTerrainDefIds() => _terrainDefs.Keys;
+        public static IEnumerable<int> GetAllFloorDefIds() => _floorDefs.Keys;
+        public static IEnumerable<int> GetAllStructureDefIds() => _structureDefs.Keys;
+        public static IEnumerable<int> GetAllItemDefIds() => _itemDefs.Keys;
+        public static IEnumerable<int> GetAllPawnDefIds() => _pawnDefs.Keys;
     }
 }

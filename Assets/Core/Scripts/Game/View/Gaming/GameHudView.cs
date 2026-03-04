@@ -123,7 +123,10 @@ namespace Core.Game.View
                 structure = $"{sDef.Name} (HP:{cell.StructureHealth}/{sDef.MaxHealth})";
             }
 
-            _infoContent.text = $"地形: {terrain}\n地板: {floorType}\n结构: {structure}\n{walkable} | {room}";
+            string roof = cell.HasRoof ? "有屋顶" : "无屋顶";
+            string indoor = cell.IsIndoor ? "室内" : "室外";
+
+            _infoContent.text = $"地形: {terrain}\n地板: {floorType}\n结构: {structure}\n{walkable} | {indoor} | {roof} | {room}";
         }
 
         private void UpdatePawnInfo(long pawnId)

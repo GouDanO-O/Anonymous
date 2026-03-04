@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c \":*)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(xargs grep -l \"stair\\\\|Stair\\\\|floor.*transition\\\\|Floor.*Transition\")"
     ]
   }
 }

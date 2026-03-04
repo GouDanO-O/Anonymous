@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using Core.Game.Blueprint.Model;
 using Core.Game.Item.Model;
+using Core.Game.Map.Data;
 using Core.Game.Map.Event;
+using Core.Game.Map.Model;
 using Core.Game.Map.System;
 using Core.Game.Map.Utility;
 using Core.Game.Pawn.View;
@@ -28,7 +30,6 @@ namespace Core.Game.Map.View
         private MapOcclusionSystem _occlusionSystem;
 
         private ChunkMeshBuilder _meshBuilder;
-        private Material _baseMaterial;
 
         /// <summary>
         /// 活跃的ChunkRenderer字典: key = (chunkX, chunkY, floor)
@@ -81,8 +82,8 @@ namespace Core.Game.Map.View
         {
             _meshBuilder = new ChunkMeshBuilder();
 
-            // 创建基础材质 (使用顶点色)
-            _baseMaterial = new Material(Shader.Find("Sprites/Default"));
+            // 初始化 Tile Atlas (加载贴图, 打包 Atlas, 创建 Material)
+            TileAtlasManager.Initialize();
         }
 
         private void Update()
@@ -162,8 +163,8 @@ namespace Core.Game.Map.View
             {
                 if (_activeRenderers.ContainsKey(key)) continue;
 
-                var chunk = this.GetModel<Model.MapDataModel>()
-                    .GetChunk(key.x, key.y, key.z);
+                var mapModel = this.GetModel<MapDataModel>();
+                var chunk = mapModel.GetChunk(key.x, key.y, key.z);
 
                 if (chunk == null) continue;
 
@@ -172,7 +173,8 @@ namespace Core.Game.Map.View
                 var itemModel = this.GetModel<ItemDataModel>();
                 var materialModel = this.GetModel<MaterialDataModel>();
                 var blueprintModel = this.GetModel<BlueprintDataModel>();
-                renderer.Initialize(chunk, _meshBuilder, _baseMaterial, _mapWidth, _mapHeight,
+                var mapData = mapModel.CurrentMap;
+                renderer.Initialize(chunk, _meshBuilder, _mapWidth, _mapHeight, mapData,
                     itemModel, materialModel, blueprintModel);
                 renderer.SetVisible(true);
 
@@ -236,7 +238,7 @@ namespace Core.Game.Map.View
                 if (kvp.Key.z != _mapSystem.CurrentFloor) continue;
 
                 // 检查该chunk是否包含该房间的cell
-                var chunk = this.GetModel<Model.MapDataModel>()
+                var chunk = this.GetModel<MapDataModel>()
                     .GetChunk(kvp.Key.x, kvp.Key.y, kvp.Key.z);
 
                 if (chunk == null) continue;
@@ -294,9 +296,6 @@ namespace Core.Game.Map.View
 
         private void OnDestroy()
         {
-            if (_baseMaterial != null)
-                Destroy(_baseMaterial);
-
             if (_cullingSystem != null)
             {
                 _cullingSystem.OnChunksVisible -= OnChunksVisible;

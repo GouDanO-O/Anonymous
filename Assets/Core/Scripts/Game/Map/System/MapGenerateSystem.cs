@@ -225,7 +225,6 @@ namespace Core.Game.Map.System
                         cell.SetFlag(ECellFlags.Buildable, true);
                     }
 
-                    cell.SetFlag(ECellFlags.Indoor, true);
                     cell.SetFlag(ECellFlags.HasRoof, true);
                 }
             }
@@ -346,7 +345,6 @@ namespace Core.Game.Map.System
                         cell.SetFlag(ECellFlags.Walkable, true);
                     }
 
-                    cell.SetFlag(ECellFlags.Indoor, true);
                     cell.SetFlag(ECellFlags.HasRoof, true);
                 }
             }

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Core.Game.Pawn.Define;
-using UnityEngine;
 
 namespace Core.Game.Pawn.Data
 {
@@ -25,7 +24,7 @@ namespace Core.Game.Pawn.Data
 
         // 移动
         public float MoveSpeed;
-        public List<Vector2Int> CurrentPath;
+        public List<PathStep> CurrentPath;
         public int PathIndex;
         public float MoveProgress; // 0~1, 当前格到下一格的进度
 
@@ -41,9 +40,9 @@ namespace Core.Game.Pawn.Data
                                 PathIndex < CurrentPath.Count;
 
         /// <summary>
-        /// 当前路径的下一个目标格
+        /// 当前路径的下一个目标步骤
         /// </summary>
-        public Vector2Int? NextPathTarget
+        public PathStep? NextPathStep
         {
             get
             {

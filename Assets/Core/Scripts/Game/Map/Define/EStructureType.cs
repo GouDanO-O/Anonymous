@@ -8,6 +8,8 @@ namespace Core.Game.Map.Define
         Wall = 0,
         Door = 1,
         Window = 2,
+        Pillar = 3,
+        Stair = 4,
     }
 
     /// <summary>

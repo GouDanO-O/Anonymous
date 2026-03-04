@@ -66,7 +66,9 @@ namespace Core.Game.Pawn.View
             go.transform.SetParent(transform, false);
 
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = _circleSprite;
+            // 尝试从 Resources 加载自定义 Pawn 贴图, 无则使用程序化圆形
+            var customSprite = Resources.Load<Sprite>($"Tiles/Pawn/Pawn_{evt.Data.PawnDefId}");
+            sr.sprite = customSprite != null ? customSprite : _circleSprite;
             sr.color = def.Color;
             sr.sortingOrder = PawnConst.PawnSortOrderBase;
 
@@ -119,13 +121,17 @@ namespace Core.Game.Pawn.View
                 float targetY = pawn.Y + 0.5f;
 
                 // 移动中: 加上朝下一格的插值偏移
-                if (pawn.IsMoving && pawn.NextPathTarget.HasValue)
+                if (pawn.IsMoving && pawn.NextPathStep.HasValue)
                 {
-                    var next = pawn.NextPathTarget.Value;
-                    float offsetX = (next.x - pawn.X) * pawn.MoveProgress;
-                    float offsetY = (next.y - pawn.Y) * pawn.MoveProgress;
-                    targetX += offsetX;
-                    targetY += offsetY;
+                    var next = pawn.NextPathStep.Value;
+                    // 楼梯过渡步骤不做XY插值
+                    if (!next.IsStairTransition && next.Floor == pawn.Floor)
+                    {
+                        float offsetX = (next.X - pawn.X) * pawn.MoveProgress;
+                        float offsetY = (next.Y - pawn.Y) * pawn.MoveProgress;
+                        targetX += offsetX;
+                        targetY += offsetY;
+                    }
                 }
 
                 // 平滑插值到目标位置

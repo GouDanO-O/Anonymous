@@ -7,6 +7,8 @@ using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using Core.Game.Map.Model;
 using Core.Game.Map.System;
+using Core.Game.Pawn.Define;
+using Core.Game.Pawn.Model;
 using Core.Game.Resource.Data;
 using Core.Game.Resource.Define;
 using Core.Game.Resource.Model;
@@ -25,6 +27,7 @@ namespace Core.Game.Blueprint.System
         private MapDataModel _mapDataModel;
         private ItemSystem _itemSystem;
         private MaterialDataModel _materialModel;
+        private PawnDataModel _pawnModel;
 
         protected override void OnInit()
         {
@@ -33,6 +36,7 @@ namespace Core.Game.Blueprint.System
             _mapDataModel = this.GetModel<MapDataModel>();
             _itemSystem = this.GetSystem<ItemSystem>();
             _materialModel = this.GetModel<MaterialDataModel>();
+            _pawnModel = this.GetModel<PawnDataModel>();
         }
 
         /// <summary>
@@ -44,6 +48,12 @@ namespace Core.Game.Blueprint.System
             {
                 case EBlueprintType.BuildStructure:
                     _mapSystem.SetStructure(bp.X, bp.Y, bp.Floor, bp.DefId);
+                    // 如果结构阻挡移动, 驱逐该格上的Pawn
+                    var builtDef = TempConfigProvider.GetStructureDef(bp.DefId);
+                    if (builtDef.BlocksMovement)
+                    {
+                        DisplacePawnsFromCell(bp.X, bp.Y, bp.Floor);
+                    }
                     break;
 
                 case EBlueprintType.BuildFurniture:
@@ -75,6 +85,31 @@ namespace Core.Game.Blueprint.System
                 case EBlueprintType.Reinstall:
                     // 重装: 无材料消耗, 使用已拆卸物品
                     _itemSystem.ReinstallItem(bp.SourceItemId, bp.X, bp.Y, bp.Floor, bp.Rotation);
+                    break;
+
+                case EBlueprintType.BuildFloor:
+                    _mapSystem.SetCellFloor(bp.X, bp.Y, bp.Floor, bp.DefId);
+                    break;
+
+                case EBlueprintType.DemolishFloor:
+                {
+                    var floorDef = TempConfigProvider.GetFloorDef(bp.DefId);
+                    _mapSystem.RemoveCellFloor(bp.X, bp.Y, bp.Floor);
+                    SpawnMaterials(floorDef.DemolishReturns, bp.X, bp.Y, bp.Floor);
+                    break;
+                }
+
+                case EBlueprintType.BuildRoof:
+                    _mapSystem.SetRoof(bp.X, bp.Y, bp.Floor, true);
+                    break;
+
+                case EBlueprintType.DemolishRoof:
+                    _mapSystem.SetRoof(bp.X, bp.Y, bp.Floor, false);
+                    SpawnMaterials(TempConfigProvider.RoofDemolishReturns, bp.X, bp.Y, bp.Floor);
+                    break;
+
+                case EBlueprintType.BuildFoundation:
+                    _mapSystem.SetTerrain(bp.X, bp.Y, bp.Floor, 7); // Foundation
                     break;
             }
 
@@ -143,6 +178,38 @@ namespace Core.Game.Blueprint.System
             if (bp.IsComplete)
             {
                 CompleteConstruction(bp);
+            }
+        }
+
+        /// <summary>
+        /// 驱逐指定格子上的所有Pawn到最近可行走邻格
+        /// </summary>
+        private void DisplacePawnsFromCell(int x, int y, int floor)
+        {
+            int[] dx = { 0, 0, -1, 1 };
+            int[] dy = { -1, 1, 0, 0 };
+
+            foreach (var pawn in _pawnModel.GetAllPawns().Values)
+            {
+                if (pawn.X != x || pawn.Y != y || pawn.Floor != floor) continue;
+
+                for (int i = 0; i < 4; i++)
+                {
+                    int nx = x + dx[i], ny = y + dy[i];
+                    if (_mapSystem.IsValidPosition(nx, ny, floor) &&
+                        _mapSystem.IsCellWalkable(nx, ny, floor))
+                    {
+                        _mapSystem.RemoveObject(pawn.X, pawn.Y, pawn.Floor, pawn.PawnId);
+                        pawn.X = nx;
+                        pawn.Y = ny;
+                        _mapSystem.PlaceObject(nx, ny, floor, pawn.PawnId);
+                        pawn.ClearPath();
+                        pawn.State = EPawnState.Idle;
+                        pawn.StateTimer = 0f;
+                        LogKit.Log($"Pawn {pawn.Name}: 被驱逐 ({x},{y})→({nx},{ny})");
+                        break;
+                    }
+                }
             }
         }
 

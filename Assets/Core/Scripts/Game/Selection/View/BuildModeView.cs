@@ -20,6 +20,11 @@ namespace Core.Game.Selection.View
             Wall,
             Door,
             Window,
+            Pillar,
+            Stair,
+            Floor,
+            Roof,
+            Foundation,
             Furniture,
             Demolish,
             Disassemble,
@@ -36,14 +41,20 @@ namespace Core.Game.Selection.View
         private EBuildMode _currentMode = EBuildMode.None;
 
         // 结构DefId: 1=WoodWall, 2=StoneWall, 3=WoodDoor, 4=StoneDoor, 5=WoodWindow, 6=StoneWindow
+        // 7=WoodPillar, 8=StonePillar, 9=WoodStair, 10=StoneStair
         private int _selectedWallStructureId = 1;
         private int _selectedDoorStructureId = 3;
         private int _selectedWindowStructureId = 5;
+        private int _selectedPillarStructureId = 7;
+        private int _selectedStairStructureId = 9;
+        private int _selectedFloorDefId = 1; // WoodFloor
         private int _selectedItemDefId = 1; // 默认床
         private bool _panelVisible;
 
         // 按钮引用
-        private Button _wallBtn, _doorBtn, _windowBtn, _furnitureBtn, _demolishBtn, _disassembleBtn, _cancelBtn;
+        private Button _wallBtn, _doorBtn, _windowBtn, _pillarBtn, _stairBtn;
+        private Button _floorBtn, _roofBtn, _foundationBtn;
+        private Button _furnitureBtn, _demolishBtn, _disassembleBtn, _cancelBtn;
 
         // 家具选择
         private int[] _availableFurniture = { 1, 2, 3, 4, 5, 6 }; // Bed,Table,Chair,Crate,Rug,Lamp
@@ -119,6 +130,26 @@ namespace Core.Game.Selection.View
 
                 case EBuildMode.Window:
                     _blueprintSystem.PlaceBuildStructureBlueprint(_selectedWindowStructureId, cellX, cellY, floor);
+                    break;
+
+                case EBuildMode.Pillar:
+                    _blueprintSystem.PlaceBuildStructureBlueprint(_selectedPillarStructureId, cellX, cellY, floor);
+                    break;
+
+                case EBuildMode.Stair:
+                    _blueprintSystem.PlaceBuildStructureBlueprint(_selectedStairStructureId, cellX, cellY, floor);
+                    break;
+
+                case EBuildMode.Floor:
+                    _blueprintSystem.PlaceBuildFloorBlueprint(_selectedFloorDefId, cellX, cellY, floor);
+                    break;
+
+                case EBuildMode.Roof:
+                    _blueprintSystem.PlaceBuildRoofBlueprint(cellX, cellY, floor);
+                    break;
+
+                case EBuildMode.Foundation:
+                    _blueprintSystem.PlaceBuildFoundationBlueprint(cellX, cellY, floor);
                     break;
 
                 case EBuildMode.Furniture:
@@ -213,6 +244,30 @@ namespace Core.Game.Selection.View
                     _modeLabel.text = $"建窗: {def.Name} (点击格子)";
                     break;
                 }
+                case EBuildMode.Pillar:
+                {
+                    var def = TempConfigProvider.GetStructureDef(_selectedPillarStructureId);
+                    _modeLabel.text = $"建柱: {def.Name} (点击格子)";
+                    break;
+                }
+                case EBuildMode.Stair:
+                {
+                    var def = TempConfigProvider.GetStructureDef(_selectedStairStructureId);
+                    _modeLabel.text = $"建梯: {def.Name} (点击格子)";
+                    break;
+                }
+                case EBuildMode.Floor:
+                {
+                    var def = TempConfigProvider.GetFloorDef(_selectedFloorDefId);
+                    _modeLabel.text = $"铺地板: {def.Name} (点击格子)";
+                    break;
+                }
+                case EBuildMode.Roof:
+                    _modeLabel.text = "建屋顶 (点击格子)";
+                    break;
+                case EBuildMode.Foundation:
+                    _modeLabel.text = "建地基 (点击水面)";
+                    break;
                 case EBuildMode.Furniture:
                 {
                     var def = TempConfigProvider.GetItemDef(_selectedItemDefId);
@@ -233,6 +288,11 @@ namespace Core.Game.Selection.View
             SetButtonHighlight(_wallBtn, _currentMode == EBuildMode.Wall);
             SetButtonHighlight(_doorBtn, _currentMode == EBuildMode.Door);
             SetButtonHighlight(_windowBtn, _currentMode == EBuildMode.Window);
+            SetButtonHighlight(_pillarBtn, _currentMode == EBuildMode.Pillar);
+            SetButtonHighlight(_stairBtn, _currentMode == EBuildMode.Stair);
+            SetButtonHighlight(_floorBtn, _currentMode == EBuildMode.Floor);
+            SetButtonHighlight(_roofBtn, _currentMode == EBuildMode.Roof);
+            SetButtonHighlight(_foundationBtn, _currentMode == EBuildMode.Foundation);
             SetButtonHighlight(_furnitureBtn, _currentMode == EBuildMode.Furniture);
             SetButtonHighlight(_demolishBtn, _currentMode == EBuildMode.Demolish);
             SetButtonHighlight(_disassembleBtn, _currentMode == EBuildMode.Disassemble);
@@ -263,7 +323,7 @@ namespace Core.Game.Selection.View
 
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // 工具栏容器 (底部居中)
+            // 工具栏容器 (底部居中, 两行按钮)
             _toolbar = new GameObject("Toolbar", typeof(RectTransform));
             _toolbar.transform.SetParent(canvasGo.transform, false);
             var toolbarRT = _toolbar.GetComponent<RectTransform>();
@@ -271,7 +331,7 @@ namespace Core.Game.Selection.View
             toolbarRT.anchorMax = new Vector2(0.5f, 0);
             toolbarRT.pivot = new Vector2(0.5f, 0);
             toolbarRT.anchoredPosition = new Vector2(0, 10);
-            toolbarRT.sizeDelta = new Vector2(720, 90);
+            toolbarRT.sizeDelta = new Vector2(720, 140);
 
             var toolbarBg = _toolbar.AddComponent<Image>();
             toolbarBg.color = new Color(0, 0, 0, 0.75f);
@@ -294,34 +354,54 @@ namespace Core.Game.Selection.View
             labelRT.anchoredPosition = new Vector2(0, 2);
             labelRT.sizeDelta = new Vector2(0, 20);
 
-            // 按钮行 (7个按钮: 墙壁/门/窗/家具/拆除/拆卸/关闭)
-            float btnWidth = 85f;
-            float btnHeight = 50f;
-            float spacing = 8f;
-            int btnCount = 7;
-            float startX = -(btnWidth * btnCount + spacing * (btnCount - 1)) / 2f + btnWidth / 2f;
-            float btnY = -52f;
+            // 两行按钮布局
+            float btnWidth = 80f;
+            float btnHeight = 40f;
+            float spacing = 6f;
+            int colsPerRow = 6;
+            float totalRowWidth = btnWidth * colsPerRow + spacing * (colsPerRow - 1);
+            float startX = -totalRowWidth / 2f + btnWidth / 2f;
+            float row1Y = -45f;  // 第一行
+            float row2Y = -92f;  // 第二行
 
             Text _;
-            _wallBtn = CreateButton(_toolbar, "墙壁", startX, btnY, btnWidth, btnHeight, out _);
+
+            // === 第一行: 结构类 ===
+            _wallBtn = CreateButton(_toolbar, "墙壁", startX, row1Y, btnWidth, btnHeight, out _);
             _wallBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Wall ? EBuildMode.None : EBuildMode.Wall));
 
-            _doorBtn = CreateButton(_toolbar, "门", startX + (btnWidth + spacing), btnY, btnWidth, btnHeight, out _);
+            _doorBtn = CreateButton(_toolbar, "门", startX + (btnWidth + spacing), row1Y, btnWidth, btnHeight, out _);
             _doorBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Door ? EBuildMode.None : EBuildMode.Door));
 
-            _windowBtn = CreateButton(_toolbar, "窗", startX + (btnWidth + spacing) * 2, btnY, btnWidth, btnHeight, out _);
+            _windowBtn = CreateButton(_toolbar, "窗", startX + (btnWidth + spacing) * 2, row1Y, btnWidth, btnHeight, out _);
             _windowBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Window ? EBuildMode.None : EBuildMode.Window));
 
-            _furnitureBtn = CreateButton(_toolbar, "家具", startX + (btnWidth + spacing) * 3, btnY, btnWidth, btnHeight, out _);
+            _pillarBtn = CreateButton(_toolbar, "柱子", startX + (btnWidth + spacing) * 3, row1Y, btnWidth, btnHeight, out _);
+            _pillarBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Pillar ? EBuildMode.None : EBuildMode.Pillar));
+
+            _stairBtn = CreateButton(_toolbar, "楼梯", startX + (btnWidth + spacing) * 4, row1Y, btnWidth, btnHeight, out _);
+            _stairBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Stair ? EBuildMode.None : EBuildMode.Stair));
+
+            _furnitureBtn = CreateButton(_toolbar, "家具", startX + (btnWidth + spacing) * 5, row1Y, btnWidth, btnHeight, out _);
             _furnitureBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Furniture ? EBuildMode.None : EBuildMode.Furniture));
 
-            _demolishBtn = CreateButton(_toolbar, "拆除", startX + (btnWidth + spacing) * 4, btnY, btnWidth, btnHeight, out _);
+            // === 第二行: 地面/屋顶/操作类 ===
+            _floorBtn = CreateButton(_toolbar, "地板", startX, row2Y, btnWidth, btnHeight, out _);
+            _floorBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Floor ? EBuildMode.None : EBuildMode.Floor));
+
+            _roofBtn = CreateButton(_toolbar, "屋顶", startX + (btnWidth + spacing), row2Y, btnWidth, btnHeight, out _);
+            _roofBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Roof ? EBuildMode.None : EBuildMode.Roof));
+
+            _foundationBtn = CreateButton(_toolbar, "地基", startX + (btnWidth + spacing) * 2, row2Y, btnWidth, btnHeight, out _);
+            _foundationBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Foundation ? EBuildMode.None : EBuildMode.Foundation));
+
+            _demolishBtn = CreateButton(_toolbar, "拆除", startX + (btnWidth + spacing) * 3, row2Y, btnWidth, btnHeight, out _);
             _demolishBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Demolish ? EBuildMode.None : EBuildMode.Demolish));
 
-            _disassembleBtn = CreateButton(_toolbar, "拆卸", startX + (btnWidth + spacing) * 5, btnY, btnWidth, btnHeight, out _);
+            _disassembleBtn = CreateButton(_toolbar, "拆卸", startX + (btnWidth + spacing) * 4, row2Y, btnWidth, btnHeight, out _);
             _disassembleBtn.onClick.AddListener(() => SetMode(_currentMode == EBuildMode.Disassemble ? EBuildMode.None : EBuildMode.Disassemble));
 
-            _cancelBtn = CreateButton(_toolbar, "关闭", startX + (btnWidth + spacing) * 6, btnY, btnWidth, btnHeight, out _);
+            _cancelBtn = CreateButton(_toolbar, "关闭", startX + (btnWidth + spacing) * 5, row2Y, btnWidth, btnHeight, out _);
             _cancelBtn.onClick.AddListener(TogglePanel);
 
             // 设置关闭按钮为红色

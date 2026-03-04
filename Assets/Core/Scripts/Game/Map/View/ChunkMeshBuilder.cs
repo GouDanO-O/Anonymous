@@ -16,6 +16,7 @@ namespace Core.Game.Map.View
     /// <summary>
     /// Chunk Mesh构建器
     /// 为每个渲染层(地形/地板/墙/屋顶)生成Mesh
+    /// 支持 Atlas UV 映射和 Autotile
     /// </summary>
     public class ChunkMeshBuilder
     {
@@ -35,7 +36,8 @@ namespace Core.Game.Map.View
             chunk.ForEachCell((cell, lx, ly) =>
             {
                 if (cell.TerrainDefId == MapConst.InvalidDefId) return;
-                AddQuad(lx, ly, GetTerrainColor(cell.TerrainDefId));
+                var uv = TileAtlasManager.GetTerrainUV(cell.TerrainDefId);
+                AddQuad(lx, ly, GetTerrainColor(cell.TerrainDefId), uv);
             });
 
             return CreateMesh("Terrain");
@@ -51,7 +53,8 @@ namespace Core.Game.Map.View
             chunk.ForEachCell((cell, lx, ly) =>
             {
                 if (cell.FloorDefId == MapConst.InvalidDefId) return;
-                AddQuad(lx, ly, GetFloorColor(cell.FloorDefId));
+                var uv = TileAtlasManager.GetFloorUV(cell.FloorDefId);
+                AddQuad(lx, ly, GetFloorColor(cell.FloorDefId), uv);
             });
 
             return CreateMesh("Floor");
@@ -59,8 +62,10 @@ namespace Core.Game.Map.View
 
         /// <summary>
         /// 构建结构层Mesh (墙/门/窗 — 独占整格)
+        /// Wall 类型支持 Autotile: 根据 4 邻接位掩码选择贴图变体
         /// </summary>
-        public Mesh BuildWallMesh(ChunkData chunk, int mapWidth, int mapHeight)
+        public Mesh BuildWallMesh(ChunkData chunk, int mapWidth, int mapHeight,
+            MapData mapData = null, int floor = 0)
         {
             ClearBuffers();
 
@@ -75,19 +80,47 @@ namespace Core.Game.Map.View
                 {
                     // 门: 稍小的矩形以示区分
                     float inset = 0.15f;
-                    AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color);
+                    var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
+                    AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color, uv);
                 }
                 else if (def.StructureType == EStructureType.Window)
                 {
                     // 窗: 略小矩形 + 半透明
                     float inset = 0.1f;
                     color.a = 0.7f;
-                    AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color);
+                    var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
+                    AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color, uv);
+                }
+                else if (def.StructureType == EStructureType.Pillar)
+                {
+                    // 柱子: 居中小方块
+                    float inset = 0.3f;
+                    var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
+                    AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color, uv);
+                }
+                else if (def.StructureType == EStructureType.Stair)
+                {
+                    // 楼梯: 整格底色 + 居中箭头色块(模拟向上箭头)
+                    var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
+                    color.a = 0.6f;
+                    AddQuad(lx, ly, color, uv);
+                    // 箭头指示 (居中较亮色块, 使用 fallback UV)
+                    Color arrowColor = new Color(
+                        Mathf.Min(color.r + 0.3f, 1f),
+                        Mathf.Min(color.g + 0.3f, 1f),
+                        Mathf.Min(color.b + 0.3f, 1f), 0.9f);
+                    AddRect(lx + 0.35f, ly + 0.15f, lx + 0.65f, ly + 0.85f, arrowColor,
+                        TileAtlasManager.FallbackUV);
                 }
                 else
                 {
-                    // 墙: 完整1x1色块
-                    AddQuad(lx, ly, color);
+                    // 墙: Autotile
+                    int worldX = chunk.WorldStartX + lx;
+                    int worldY = chunk.WorldStartY + ly;
+                    int bitmask = ComputeAutotileBitmask(worldX, worldY, floor,
+                        cell.StructureDefId, mapData);
+                    var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, bitmask);
+                    AddQuad(lx, ly, color, uv);
                 }
             });
 
@@ -101,10 +134,12 @@ namespace Core.Game.Map.View
         {
             ClearBuffers();
 
+            var roofUV = TileAtlasManager.GetRoofUV();
+
             chunk.ForEachCell((cell, lx, ly) =>
             {
                 if (!cell.HasRoof) return;
-                AddQuad(lx, ly, new Color(0.4f, 0.35f, 0.3f, 1f));
+                AddQuad(lx, ly, new Color(0.4f, 0.35f, 0.3f, 1f), roofUV);
             });
 
             return CreateMesh("Roof");
@@ -162,11 +197,12 @@ namespace Core.Game.Map.View
                         if (!def.BlocksMovement)
                             color.a = 0.5f; // 非阻挡物品半透明
 
+                        var uv = TileAtlasManager.GetItemUV(item.ItemDefId);
                         float rx = lx;
                         float ry = ly;
                         float padding = 0.05f;
                         AddRect(rx + padding, ry + padding,
-                            rx + item.Width - padding, ry + item.Height - padding, color);
+                            rx + item.Width - padding, ry + item.Height - padding, color, uv);
                     }
                 }
             });
@@ -187,6 +223,7 @@ namespace Core.Game.Map.View
 
         /// <summary>
         /// 构建蓝图层Mesh (半透明覆盖, 显示待建造/拆除指令)
+        /// 蓝图层不使用贴图, 保持纯顶点色
         /// </summary>
         public Mesh BuildBlueprintMesh(ChunkData chunk, BlueprintDataModel blueprintModel, int floor)
         {
@@ -208,12 +245,29 @@ namespace Core.Game.Map.View
                     localY < 0 || localY >= MapConst.ChunkSize)
                     continue;
 
-                // 建造类: 绿色半透明; 拆除/拆卸类: 红色半透明
-                bool isDemolish = bp.Type == EBlueprintType.Demolish ||
-                                  bp.Type == EBlueprintType.Disassemble;
-                Color color = isDemolish
-                    ? new Color(0.9f, 0.2f, 0.2f, 0.3f)
-                    : new Color(0.2f, 0.9f, 0.3f, 0.3f);
+                // 根据蓝图类型决定颜色
+                Color color;
+                switch (bp.Type)
+                {
+                    case EBlueprintType.Demolish:
+                    case EBlueprintType.Disassemble:
+                    case EBlueprintType.DemolishFloor:
+                    case EBlueprintType.DemolishRoof:
+                        color = new Color(0.9f, 0.2f, 0.2f, 0.3f);
+                        break;
+                    case EBlueprintType.BuildFloor:
+                        color = new Color(0.2f, 0.5f, 0.9f, 0.3f);
+                        break;
+                    case EBlueprintType.BuildRoof:
+                        color = new Color(0.5f, 0.45f, 0.4f, 0.3f);
+                        break;
+                    case EBlueprintType.BuildFoundation:
+                        color = new Color(0.6f, 0.45f, 0.3f, 0.3f);
+                        break;
+                    default:
+                        color = new Color(0.2f, 0.9f, 0.3f, 0.3f);
+                        break;
+                }
 
                 // 进行中的蓝图稍亮
                 if (bp.State == EBlueprintState.InProgress)
@@ -246,8 +300,13 @@ namespace Core.Game.Map.View
 
                     case EBlueprintType.Demolish:
                     case EBlueprintType.Disassemble:
+                    case EBlueprintType.DemolishFloor:
+                    case EBlueprintType.DemolishRoof:
+                    case EBlueprintType.BuildFloor:
+                    case EBlueprintType.BuildRoof:
+                    case EBlueprintType.BuildFoundation:
                     {
-                        // 拆除/拆卸: 整格覆盖
+                        // 整格覆盖
                         AddQuad(localX, localY, color);
                         break;
                     }
@@ -256,6 +315,48 @@ namespace Core.Game.Map.View
 
             return CreateMesh("Blueprint");
         }
+
+        #region Autotile
+
+        /// <summary>
+        /// 计算 4-bit 邻接位掩码 (仅用于 Wall 类型)
+        /// N=1, E=2, S=4, W=8
+        /// 同类型 Wall 的邻居置位
+        /// </summary>
+        private int ComputeAutotileBitmask(int worldX, int worldY, int floor,
+            int structureDefId, MapData mapData)
+        {
+            if (mapData == null) return 0;
+
+            int mask = 0;
+            // N: y+1
+            if (HasSameWallType(worldX, worldY + 1, floor, structureDefId, mapData)) mask |= 1;
+            // E: x+1
+            if (HasSameWallType(worldX + 1, worldY, floor, structureDefId, mapData)) mask |= 2;
+            // S: y-1
+            if (HasSameWallType(worldX, worldY - 1, floor, structureDefId, mapData)) mask |= 4;
+            // W: x-1
+            if (HasSameWallType(worldX - 1, worldY, floor, structureDefId, mapData)) mask |= 8;
+            return mask;
+        }
+
+        /// <summary>
+        /// 检查邻接格是否有相同类型的 Wall
+        /// 允许不同材质的墙互相连接 (只要都是 Wall 类型)
+        /// </summary>
+        private bool HasSameWallType(int worldX, int worldY, int floor,
+            int structureDefId, MapData mapData)
+        {
+            if (!mapData.IsValidCellPos(worldX, worldY, floor)) return false;
+
+            var cell = mapData.GetCell(worldX, worldY, floor);
+            if (cell == null || !cell.HasStructure) return false;
+
+            var neighborDef = TempConfigProvider.GetStructureDef(cell.StructureDefId);
+            return neighborDef.StructureType == EStructureType.Wall;
+        }
+
+        #endregion
 
         #region 内部方法
 
@@ -268,17 +369,25 @@ namespace Core.Game.Map.View
         }
 
         /// <summary>
-        /// 添加1x1的quad
+        /// 添加1x1的quad (使用 Atlas UV)
         /// </summary>
-        private void AddQuad(float x, float y, Color color)
+        private void AddQuad(float x, float y, Color color, Rect uvRect)
         {
-            AddRect(x, y, x + 1f, y + 1f, color);
+            AddRect(x, y, x + 1f, y + 1f, color, uvRect);
         }
 
         /// <summary>
-        /// 添加任意矩形quad
+        /// 添加1x1的quad (使用 FallbackUV, 蓝图层等纯色场景)
         /// </summary>
-        private void AddRect(float x0, float y0, float x1, float y1, Color color)
+        private void AddQuad(float x, float y, Color color)
+        {
+            AddRect(x, y, x + 1f, y + 1f, color, TileAtlasManager.FallbackUV);
+        }
+
+        /// <summary>
+        /// 添加任意矩形quad (使用 Atlas UV)
+        /// </summary>
+        private void AddRect(float x0, float y0, float x1, float y1, Color color, Rect uvRect)
         {
             int idx = _vertices.Count;
 
@@ -294,15 +403,23 @@ namespace Core.Game.Map.View
             _triangles.Add(idx + 3);
             _triangles.Add(idx + 2);
 
-            _uvs.Add(new Vector2(0, 0));
-            _uvs.Add(new Vector2(1, 0));
-            _uvs.Add(new Vector2(1, 1));
-            _uvs.Add(new Vector2(0, 1));
+            _uvs.Add(new Vector2(uvRect.xMin, uvRect.yMin));
+            _uvs.Add(new Vector2(uvRect.xMax, uvRect.yMin));
+            _uvs.Add(new Vector2(uvRect.xMax, uvRect.yMax));
+            _uvs.Add(new Vector2(uvRect.xMin, uvRect.yMax));
 
             _colors.Add(color);
             _colors.Add(color);
             _colors.Add(color);
             _colors.Add(color);
+        }
+
+        /// <summary>
+        /// 添加任意矩形quad (使用 FallbackUV)
+        /// </summary>
+        private void AddRect(float x0, float y0, float x1, float y1, Color color)
+        {
+            AddRect(x0, y0, x1, y1, color, TileAtlasManager.FallbackUV);
         }
 
         private Mesh CreateMesh(string name)

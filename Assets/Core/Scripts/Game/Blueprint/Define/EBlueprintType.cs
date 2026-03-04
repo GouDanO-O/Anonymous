@@ -5,7 +5,11 @@ namespace Core.Game.Blueprint.Define
         BuildStructure,
         BuildFloor,
         BuildFurniture,
+        BuildRoof,
+        BuildFoundation,
         Demolish,
+        DemolishFloor,
+        DemolishRoof,
         Disassemble,
         Reinstall,
     }

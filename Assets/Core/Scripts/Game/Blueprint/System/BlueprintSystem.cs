@@ -4,6 +4,7 @@ using Core.Game.Blueprint.Event;
 using Core.Game.Blueprint.Model;
 using Core.Game.Item.System;
 using Core.Game.Map.Data;
+using Core.Game.Map.Define;
 using Core.Game.Map.System;
 using GDFrameworkCore;
 using GDFrameworkExtend.LogKit;
@@ -208,6 +209,183 @@ namespace Core.Game.Blueprint.System
             long id = _blueprintModel.AddBlueprint(bp);
             SendBlueprintPlacedEvent(bp);
             LogKit.Log($"蓝图放置: 重装 [{id}] ItemId={sourceItemId} → ({x},{y},F{floor})");
+            return id;
+        }
+
+        /// <summary>
+        /// 放置建造地板蓝图
+        /// </summary>
+        public long PlaceBuildFloorBlueprint(int floorDefId, int x, int y, int floor)
+        {
+            if (!_mapSystem.IsValidPosition(x, y, floor))
+                return 0;
+
+            var cell = _mapSystem.GetCell(x, y, floor);
+            if (cell == null || cell.HasFloor)
+                return 0;
+
+            // 需要可建造地形或上层有屋顶支撑
+            if (!cell.IsBuildable)
+                return 0;
+
+            if (_blueprintModel.GetBlueprintAt(x, y, floor) != null)
+                return 0;
+
+            var bp = new BlueprintData
+            {
+                Type = EBlueprintType.BuildFloor,
+                State = EBlueprintState.Planned,
+                DefId = floorDefId,
+                X = x, Y = y, Floor = floor,
+                WorkRequired = 4f,
+                WorkDone = 0f
+            };
+
+            long id = _blueprintModel.AddBlueprint(bp);
+            SendBlueprintPlacedEvent(bp);
+            LogKit.Log($"蓝图放置: 建地板 [{id}] FloorDef={floorDefId} @ ({x},{y},F{floor})");
+            return id;
+        }
+
+        /// <summary>
+        /// 放置拆除地板蓝图
+        /// </summary>
+        public long PlaceDemolishFloorBlueprint(int x, int y, int floor)
+        {
+            var cell = _mapSystem.GetCell(x, y, floor);
+            if (cell == null || !cell.HasFloor)
+                return 0;
+
+            if (_blueprintModel.GetBlueprintAt(x, y, floor) != null)
+                return 0;
+
+            var bp = new BlueprintData
+            {
+                Type = EBlueprintType.DemolishFloor,
+                State = EBlueprintState.Planned,
+                DefId = cell.FloorDefId,
+                X = x, Y = y, Floor = floor,
+                WorkRequired = 3f,
+                WorkDone = 0f
+            };
+
+            long id = _blueprintModel.AddBlueprint(bp);
+            SendBlueprintPlacedEvent(bp);
+            LogKit.Log($"蓝图放置: 拆地板 [{id}] @ ({x},{y},F{floor})");
+            return id;
+        }
+
+        /// <summary>
+        /// 放置建造屋顶蓝图
+        /// 规则: F==0时需要Indoor或有结构, F>0时需要下层有墙/柱
+        /// </summary>
+        public long PlaceBuildRoofBlueprint(int x, int y, int floor)
+        {
+            if (!_mapSystem.IsValidPosition(x, y, floor))
+                return 0;
+
+            var cell = _mapSystem.GetCell(x, y, floor);
+            if (cell == null || cell.HasRoof)
+                return 0;
+
+            // 结构支撑检查
+            if (floor == 0)
+            {
+                // F0: 需要Indoor(被墙围合) 或 本格有结构(墙/柱)
+                if (!cell.IsIndoor && !cell.HasStructure)
+                    return 0;
+            }
+            else
+            {
+                // F>0: 下层同位置需要墙或柱
+                var lowerCell = _mapSystem.GetCell(x, y, floor - 1);
+                if (lowerCell == null || !lowerCell.HasStructure)
+                    return 0;
+
+                var lowerDef = TempConfigProvider.GetStructureDef(lowerCell.StructureDefId);
+                if (lowerDef.StructureType != EStructureType.Wall &&
+                    lowerDef.StructureType != EStructureType.Pillar)
+                    return 0;
+            }
+
+            if (_blueprintModel.GetBlueprintAt(x, y, floor) != null)
+                return 0;
+
+            var bp = new BlueprintData
+            {
+                Type = EBlueprintType.BuildRoof,
+                State = EBlueprintState.Planned,
+                DefId = 0,
+                X = x, Y = y, Floor = floor,
+                WorkRequired = 4f,
+                WorkDone = 0f
+            };
+
+            long id = _blueprintModel.AddBlueprint(bp);
+            SendBlueprintPlacedEvent(bp);
+            LogKit.Log($"蓝图放置: 建屋顶 [{id}] @ ({x},{y},F{floor})");
+            return id;
+        }
+
+        /// <summary>
+        /// 放置拆除屋顶蓝图
+        /// </summary>
+        public long PlaceDemolishRoofBlueprint(int x, int y, int floor)
+        {
+            var cell = _mapSystem.GetCell(x, y, floor);
+            if (cell == null || !cell.HasRoof)
+                return 0;
+
+            if (_blueprintModel.GetBlueprintAt(x, y, floor) != null)
+                return 0;
+
+            var bp = new BlueprintData
+            {
+                Type = EBlueprintType.DemolishRoof,
+                State = EBlueprintState.Planned,
+                DefId = 0,
+                X = x, Y = y, Floor = floor,
+                WorkRequired = 3f,
+                WorkDone = 0f
+            };
+
+            long id = _blueprintModel.AddBlueprint(bp);
+            SendBlueprintPlacedEvent(bp);
+            LogKit.Log($"蓝图放置: 拆屋顶 [{id}] @ ({x},{y},F{floor})");
+            return id;
+        }
+
+        /// <summary>
+        /// 放置建造地基蓝图 (水体→Foundation)
+        /// </summary>
+        public long PlaceBuildFoundationBlueprint(int x, int y, int floor)
+        {
+            if (!_mapSystem.IsValidPosition(x, y, floor))
+                return 0;
+
+            var cell = _mapSystem.GetCell(x, y, floor);
+            if (cell == null) return 0;
+
+            // 不允许在已是地基的地形上重复建造
+            if (cell.TerrainDefId == 7)
+                return 0;
+
+            if (_blueprintModel.GetBlueprintAt(x, y, floor) != null)
+                return 0;
+
+            var bp = new BlueprintData
+            {
+                Type = EBlueprintType.BuildFoundation,
+                State = EBlueprintState.Planned,
+                DefId = 7, // Foundation terrain ID
+                X = x, Y = y, Floor = floor,
+                WorkRequired = 6f,
+                WorkDone = 0f
+            };
+
+            long id = _blueprintModel.AddBlueprint(bp);
+            SendBlueprintPlacedEvent(bp);
+            LogKit.Log($"蓝图放置: 建地基 [{id}] @ ({x},{y},F{floor})");
             return id;
         }
 

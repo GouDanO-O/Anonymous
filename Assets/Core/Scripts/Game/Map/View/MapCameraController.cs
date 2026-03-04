@@ -1,4 +1,5 @@
 using Core.Game.Map.Event;
+using Core.Game.Map.Model;
 using Core.Game.Map.System;
 using GDFramework.Input;
 using GDFrameworkCore;
@@ -48,6 +49,19 @@ namespace Core.Game.Map.View
             this.RegisterEvent<SInputEvent_MouseMiddleDown>(OnMiddleDown);
             this.RegisterEvent<SInputEvent_MouseMiddleUp>(OnMiddleUp);
             this.RegisterEvent<SInputEvent_MouseMiddleScroll>(OnScroll);
+
+            // 如果地图已加载(错过了SMapLoadedEvent), 直接初始化边界
+            if (_mapSystem.IsMapLoaded)
+            {
+                var mapModel = this.GetModel<MapDataModel>();
+                var map = mapModel.CurrentMap;
+                if (map != null)
+                {
+                    _mapWidth = map.Width;
+                    _mapHeight = map.Height;
+                    _hasBounds = true;
+                }
+            }
         }
 
         private void Update()

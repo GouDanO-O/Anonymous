@@ -12,11 +12,13 @@ namespace Core.Game.Map.View
     /// <summary>
     /// 单个Chunk的渲染器
     /// 管理6个子Mesh (地形/地板/物品/墙/屋顶/蓝图)
+    /// 每层使用独立 Material (来自 TileAtlasManager)
     /// </summary>
     public class ChunkRenderer : MonoBehaviour
     {
         private ChunkData _chunkData;
         private ChunkMeshBuilder _meshBuilder;
+        private MapData _mapData;
         private ItemDataModel _itemModel;
         private MaterialDataModel _materialModel;
         private BlueprintDataModel _blueprintModel;
@@ -61,12 +63,13 @@ namespace Core.Game.Map.View
         private const int BlueprintLayerBase = 17500; // Roof(15000)之上
 
         public void Initialize(ChunkData chunkData, ChunkMeshBuilder meshBuilder,
-            Material baseMaterial, int mapWidth, int mapHeight,
+            int mapWidth, int mapHeight, MapData mapData,
             ItemDataModel itemModel = null, MaterialDataModel materialModel = null,
             BlueprintDataModel blueprintModel = null)
         {
             _chunkData = chunkData;
             _meshBuilder = meshBuilder;
+            _mapData = mapData;
             _itemModel = itemModel;
             _materialModel = materialModel;
             _blueprintModel = blueprintModel;
@@ -75,7 +78,7 @@ namespace Core.Game.Map.View
 
             if (!_isInitialized)
             {
-                CreateLayerRenderers(baseMaterial);
+                CreateLayerRenderers();
                 _wallPropBlock = new MaterialPropertyBlock();
                 _roofPropBlock = new MaterialPropertyBlock();
                 _isInitialized = true;
@@ -116,7 +119,7 @@ namespace Core.Game.Map.View
             _terrainFilter.mesh = _meshBuilder.BuildTerrainMesh(_chunkData, _mapWidth, _mapHeight);
             _floorFilter.mesh = _meshBuilder.BuildFloorMesh(_chunkData, _mapWidth, _mapHeight);
             _objectFilter.mesh = _meshBuilder.BuildObjectMesh(_chunkData, _itemModel, _materialModel, _chunkData.Floor);
-            _wallFilter.mesh = _meshBuilder.BuildWallMesh(_chunkData, _mapWidth, _mapHeight);
+            _wallFilter.mesh = _meshBuilder.BuildWallMesh(_chunkData, _mapWidth, _mapHeight, _mapData, _chunkData.Floor);
             _roofFilter.mesh = _meshBuilder.BuildRoofMesh(_chunkData, _mapWidth, _mapHeight);
             _blueprintFilter.mesh = _meshBuilder.BuildBlueprintMesh(_chunkData, _blueprintModel, _chunkData.Floor);
 
@@ -165,6 +168,7 @@ namespace Core.Game.Map.View
         public void Reset()
         {
             _chunkData = null;
+            _mapData = null;
             _itemModel = null;
             _materialModel = null;
             _blueprintModel = null;
@@ -182,14 +186,14 @@ namespace Core.Game.Map.View
             gameObject.SetActive(false);
         }
 
-        private void CreateLayerRenderers(Material baseMaterial)
+        private void CreateLayerRenderers()
         {
-            _terrainFilter = CreateLayerChild("Terrain", baseMaterial, out _terrainRenderer);
-            _floorFilter = CreateLayerChild("Floor", baseMaterial, out _floorRenderer);
-            _objectFilter = CreateLayerChild("Object", baseMaterial, out _objectRenderer);
-            _wallFilter = CreateLayerChild("Wall", baseMaterial, out _wallRenderer);
-            _roofFilter = CreateLayerChild("Roof", baseMaterial, out _roofRenderer);
-            _blueprintFilter = CreateLayerChild("Blueprint", baseMaterial, out _blueprintRenderer);
+            _terrainFilter = CreateLayerChild("Terrain", TileAtlasManager.TerrainMaterial, out _terrainRenderer);
+            _floorFilter = CreateLayerChild("Floor", TileAtlasManager.FloorMaterial, out _floorRenderer);
+            _objectFilter = CreateLayerChild("Object", TileAtlasManager.ObjectMaterial, out _objectRenderer);
+            _wallFilter = CreateLayerChild("Wall", TileAtlasManager.WallMaterial, out _wallRenderer);
+            _roofFilter = CreateLayerChild("Roof", TileAtlasManager.RoofMaterial, out _roofRenderer);
+            _blueprintFilter = CreateLayerChild("Blueprint", TileAtlasManager.BlueprintMaterial, out _blueprintRenderer);
         }
 
         private MeshFilter CreateLayerChild(string layerName, Material material,

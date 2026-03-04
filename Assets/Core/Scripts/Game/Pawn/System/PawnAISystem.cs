@@ -126,9 +126,9 @@ namespace Core.Game.Pawn.System
                 return;
             }
 
-            // 检查是否在蓝图旁边 (曼哈顿距离 <= 1)
+            // 检查是否在蓝图旁边 (同层且曼哈顿距离 == 1, 不允许站在蓝图格上)
             int dist = Math.Abs(pawn.X - bp.X) + Math.Abs(pawn.Y - bp.Y);
-            if (dist > 1)
+            if (dist != 1 || pawn.Floor != bp.Floor)
             {
                 // 还没到, 重新移动过去
                 if (!MoveToBlueprint(pawn, bp))
@@ -144,7 +144,9 @@ namespace Core.Game.Pawn.System
 
             // 在蓝图旁, 推进工作量
             bool isDemolish = bp.Type == EBlueprintType.Demolish ||
-                              bp.Type == EBlueprintType.Disassemble;
+                              bp.Type == EBlueprintType.Disassemble ||
+                              bp.Type == EBlueprintType.DemolishFloor ||
+                              bp.Type == EBlueprintType.DemolishRoof;
             float speed = isDemolish ? PawnConst.DemolishSpeed : PawnConst.ConstructionSpeed;
 
             _constructionSystem.AddWork(pawn.CurrentBlueprintId, speed * deltaTime);
@@ -173,9 +175,9 @@ namespace Core.Game.Pawn.System
 
             foreach (var bp in unassigned)
             {
-                if (bp.Floor != pawn.Floor) continue;
-
-                int dist = Math.Abs(pawn.X - bp.X) + Math.Abs(pawn.Y - bp.Y);
+                // 跨层距离: 楼层差额外加权
+                int dist = Math.Abs(pawn.X - bp.X) + Math.Abs(pawn.Y - bp.Y)
+                           + Math.Abs(pawn.Floor - bp.Floor) * 20;
                 if (dist < closestDist)
                 {
                     closestDist = dist;
@@ -195,9 +197,9 @@ namespace Core.Game.Pawn.System
             if (MoveToBlueprint(pawn, closest))
                 return true;
 
-            // 如果已经在旁边, 直接开始施工
+            // 如果已在蓝图邻格(dist==1)且同层, 直接开始施工
             int curDist = Math.Abs(pawn.X - closest.X) + Math.Abs(pawn.Y - closest.Y);
-            if (curDist <= 1)
+            if (curDist == 1 && pawn.Floor == closest.Floor)
             {
                 pawn.State = EPawnState.Working;
                 pawn.StateTimer = 0f;
@@ -228,10 +230,11 @@ namespace Core.Game.Pawn.System
                 int tx = bp.X + dx[i];
                 int ty = bp.Y + dy[i];
 
-                if (!_mapSystem.IsValidPosition(tx, ty, pawn.Floor)) continue;
-                if (!_mapSystem.IsCellWalkable(tx, ty, pawn.Floor)) continue;
+                if (!_mapSystem.IsValidPosition(tx, ty, bp.Floor)) continue;
+                if (!_mapSystem.IsCellWalkable(tx, ty, bp.Floor)) continue;
 
-                int dist = Math.Abs(pawn.X - tx) + Math.Abs(pawn.Y - ty);
+                int dist = Math.Abs(pawn.X - tx) + Math.Abs(pawn.Y - ty)
+                           + Math.Abs(pawn.Floor - bp.Floor) * 20;
                 if (dist < bestDist)
                 {
                     bestDist = dist;
@@ -243,15 +246,15 @@ namespace Core.Game.Pawn.System
 
             if (!found) return false;
 
-            // 如果已经在目标格, 直接进入Working状态
-            if (pawn.X == bestX && pawn.Y == bestY)
+            // 如果已经在目标格且同层, 直接进入Working状态
+            if (pawn.X == bestX && pawn.Y == bestY && pawn.Floor == bp.Floor)
             {
                 pawn.State = EPawnState.Working;
                 pawn.StateTimer = 0f;
                 return true;
             }
 
-            return _movementSystem.RequestMove(pawn.PawnId, bestX, bestY);
+            return _movementSystem.RequestMove(pawn.PawnId, bestX, bestY, bp.Floor);
         }
     }
 }
