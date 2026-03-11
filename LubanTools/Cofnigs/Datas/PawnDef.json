@@ -1,0 +1,5 @@
+[
+    {"Id": 1, "Name": "Colonist", "TexturePath": "Pawn_1", "Color": "77,128,230,255", "MoveSpeed": 2.0, "SpriteSize": 0.6},
+    {"Id": 2, "Name": "Worker", "TexturePath": "Pawn_2", "Color": "77,204,102,255", "MoveSpeed": 1.8, "SpriteSize": 0.6},
+    {"Id": 3, "Name": "Scout", "TexturePath": "Pawn_3", "Color": "230,204,51,255", "MoveSpeed": 2.5, "SpriteSize": 0.55}
+]

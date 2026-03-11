@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Core.Game.Map.Data;
+using Core.Game.Config;
 using Core.Game.Map.Define;
 using GDFrameworkExtend.LogKit;
 using UnityEngine;
@@ -183,13 +183,13 @@ namespace Core.Game.Map.View
             // (defId, subIndex) 列表, subIndex=-1 表示单帧, 0-15 表示 autotile 变体
             var indexList = new List<(int defId, int subIndex)> { (-1, -1) };
 
-            foreach (int defId in TempConfigProvider.GetAllStructureDefIds())
+            foreach (int defId in ConfigManager.GetAllStructureDefIds())
             {
-                var tex = Resources.Load<Texture2D>($"Tiles/Structure/Structure_{defId}");
+                var def = ConfigManager.GetStructureDef(defId);
+                var tex = Resources.Load<Texture2D>($"Tiles/Structure/{def.TexturePath}");
                 if (tex == null) continue;
 
-                var def = TempConfigProvider.GetStructureDef(defId);
-                if (def.StructureType == EStructureType.Wall)
+                if ((EStructureType)def.StructureType == EStructureType.Wall)
                 {
                     // Autotile sheet: 拆成 16 个子贴图 (4x4 grid)
                     int tileSize = tex.width / 4;
@@ -319,9 +319,10 @@ namespace Core.Game.Map.View
         private static List<(int defId, Texture2D tex)> LoadTerrainTextures()
         {
             var result = new List<(int, Texture2D)>();
-            foreach (int defId in TempConfigProvider.GetAllTerrainDefIds())
+            foreach (int defId in ConfigManager.GetAllTerrainDefIds())
             {
-                var tex = Resources.Load<Texture2D>($"Tiles/Terrain/Terrain_{defId}");
+                var def = ConfigManager.GetTerrainDef(defId);
+                var tex = Resources.Load<Texture2D>($"Tiles/Terrain/{def.TexturePath}");
                 if (tex != null)
                     result.Add((defId, tex));
             }
@@ -331,9 +332,10 @@ namespace Core.Game.Map.View
         private static List<(int defId, Texture2D tex)> LoadFloorTextures()
         {
             var result = new List<(int, Texture2D)>();
-            foreach (int defId in TempConfigProvider.GetAllFloorDefIds())
+            foreach (int defId in ConfigManager.GetAllFloorDefIds())
             {
-                var tex = Resources.Load<Texture2D>($"Tiles/Floor/Floor_{defId}");
+                var def = ConfigManager.GetFloorDef(defId);
+                var tex = Resources.Load<Texture2D>($"Tiles/Floor/{def.TexturePath}");
                 if (tex != null)
                     result.Add((defId, tex));
             }
@@ -343,9 +345,10 @@ namespace Core.Game.Map.View
         private static List<(int defId, Texture2D tex)> LoadItemTextures()
         {
             var result = new List<(int, Texture2D)>();
-            foreach (int defId in TempConfigProvider.GetAllItemDefIds())
+            foreach (int defId in ConfigManager.GetAllItemDefIds())
             {
-                var tex = Resources.Load<Texture2D>($"Tiles/Item/Item_{defId}");
+                var def = ConfigManager.GetItemDef(defId);
+                var tex = Resources.Load<Texture2D>($"Tiles/Item/{def.TexturePath}");
                 if (tex != null)
                     result.Add((defId, tex));
             }

@@ -1,0 +1,6 @@
+{
+    "FoundationBuildCosts": [{"Type": 2, "Amount": 3}],
+    "FoundationDemolishReturns": [{"Type": 2, "Amount": 2}],
+    "RoofBuildCosts": [{"Type": 1, "Amount": 3}],
+    "RoofDemolishReturns": [{"Type": 1, "Amount": 1}]
+}

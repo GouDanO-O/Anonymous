@@ -1,3 +1,4 @@
+using Core.Game.Config;
 using Core.Game.Item.Define;
 using Core.Game.Item.Model;
 using Core.Game.Map.Data;
@@ -64,7 +65,7 @@ namespace Core.Game.Selection.System
                 selection.SetItem(itemId, cellX, cellY, floor);
                 ApplySelection(selection);
                 var item = _itemModel.GetItem(itemId);
-                var def = TempConfigProvider.GetItemDef(item?.ItemDefId ?? 0);
+                var def = ConfigManager.GetItemDef(item?.ItemDefId ?? 0);
                 LogKit.Log($"选中Item: [{itemId}] {def.Name} @ ({cellX},{cellY})");
                 return;
             }

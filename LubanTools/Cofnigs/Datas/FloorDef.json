@@ -1,0 +1,5 @@
+[
+    {"Id": 1, "Name": "WoodFloor", "TexturePath": "Floor_1", "Color": "166,128,77,255", "MoveCost": 1, "Beauty": 1, "BuildCosts": [{"Type": 1, "Amount": 4}], "DemolishReturns": [{"Type": 1, "Amount": 2}]},
+    {"Id": 2, "Name": "StoneFloor", "TexturePath": "Floor_2", "Color": "179,179,179,255", "MoveCost": 1, "Beauty": 2, "BuildCosts": [{"Type": 2, "Amount": 4}], "DemolishReturns": [{"Type": 2, "Amount": 2}]},
+    {"Id": 3, "Name": "TileFloor", "TexturePath": "Floor_3", "Color": "204,191,166,255", "MoveCost": 1, "Beauty": 3, "BuildCosts": [{"Type": 2, "Amount": 3}, {"Type": 1, "Amount": 2}], "DemolishReturns": [{"Type": 2, "Amount": 2}]}
+]

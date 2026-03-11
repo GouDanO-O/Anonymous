@@ -2,6 +2,7 @@ using Core.Game.Blueprint.Data;
 using Core.Game.Blueprint.Define;
 using Core.Game.Blueprint.Event;
 using Core.Game.Blueprint.Model;
+using Core.Game.Config;
 using Core.Game.Item.System;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
@@ -42,7 +43,7 @@ namespace Core.Game.Blueprint.System
                 return 0;
 
             // 验证: 地形可建造
-            var terrainDef = TempConfigProvider.GetTerrainDef(cell.TerrainDefId);
+            var terrainDef = ConfigManager.GetTerrainDef(cell.TerrainDefId);
             if (!terrainDef.CanBuild && !cell.HasFloor)
                 return 0;
 
@@ -302,9 +303,9 @@ namespace Core.Game.Blueprint.System
                 if (lowerCell == null || !lowerCell.HasStructure)
                     return 0;
 
-                var lowerDef = TempConfigProvider.GetStructureDef(lowerCell.StructureDefId);
-                if (lowerDef.StructureType != EStructureType.Wall &&
-                    lowerDef.StructureType != EStructureType.Pillar)
+                var lowerDef = ConfigManager.GetStructureDef(lowerCell.StructureDefId);
+                if ((EStructureType)lowerDef.StructureType != EStructureType.Wall &&
+                    (EStructureType)lowerDef.StructureType != EStructureType.Pillar)
                     return 0;
             }
 

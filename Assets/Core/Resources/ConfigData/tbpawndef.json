@@ -1,0 +1,5 @@
+[
+  {"Id":1,"Name":"Colonist","TexturePath":"Pawn_1","Color":{"R":77,"G":128,"B":230,"A":255},"MoveSpeed":2.0,"SpriteSize":0.6},
+  {"Id":2,"Name":"Worker","TexturePath":"Pawn_2","Color":{"R":77,"G":204,"B":102,"A":255},"MoveSpeed":1.8,"SpriteSize":0.6},
+  {"Id":3,"Name":"Scout","TexturePath":"Pawn_3","Color":{"R":230,"G":204,"B":51,"A":255},"MoveSpeed":2.5,"SpriteSize":0.55}
+]

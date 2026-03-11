@@ -1,3 +1,4 @@
+using Core.Game.Config;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using Core.Game.Map.Model;
@@ -71,7 +72,7 @@ namespace Core.Game.Map.System
                     else
                         cell.TerrainDefId = 4; // 石头
 
-                    var terrainDef = TempConfigProvider.GetTerrainDef(cell.TerrainDefId);
+                    var terrainDef = ConfigManager.GetTerrainDef(cell.TerrainDefId);
                     cell.MoveCost = terrainDef.MoveCost;
                     cell.SetFlag(ECellFlags.Walkable, cell.MoveCost > 0);
                     cell.SetFlag(ECellFlags.Buildable, terrainDef.CanBuild);
@@ -187,7 +188,7 @@ namespace Core.Game.Map.System
             int doorStructureId = wallStructureId + 2;
             int windowStructureId = wallStructureId + 4;
 
-            var wallDef = TempConfigProvider.GetStructureDef(wallStructureId);
+            var wallDef = ConfigManager.GetStructureDef(wallStructureId);
 
             for (int y = startY; y < startY + h; y++)
             {
@@ -234,7 +235,7 @@ namespace Core.Game.Map.System
             var doorCell = mapData.GetCell(doorX, startY, 0);
             if (doorCell != null)
             {
-                var doorDef = TempConfigProvider.GetStructureDef(doorStructureId);
+                var doorDef = ConfigManager.GetStructureDef(doorStructureId);
                 doorCell.StructureDefId = doorStructureId;
                 doorCell.StructureHealth = doorDef.MaxHealth;
                 doorCell.DoorState = EDoorState.Closed;
@@ -266,7 +267,7 @@ namespace Core.Game.Map.System
                 var winCell = mapData.GetCell(winX, startY + h - 1, 0);
                 if (winCell != null)
                 {
-                    var winDef = TempConfigProvider.GetStructureDef(windowStructureId);
+                    var winDef = ConfigManager.GetStructureDef(windowStructureId);
                     winCell.StructureDefId = windowStructureId;
                     winCell.StructureHealth = winDef.MaxHealth;
                     winCell.DoorState = EDoorState.None;
@@ -281,7 +282,7 @@ namespace Core.Game.Map.System
                 var winCell = mapData.GetCell(startX + w - 1, winY, 0);
                 if (winCell != null)
                 {
-                    var winDef = TempConfigProvider.GetStructureDef(windowStructureId);
+                    var winDef = ConfigManager.GetStructureDef(windowStructureId);
                     winCell.StructureDefId = windowStructureId;
                     winCell.StructureHealth = winDef.MaxHealth;
                     winCell.DoorState = EDoorState.None;
@@ -315,7 +316,7 @@ namespace Core.Game.Map.System
             int wallStructureId = 2; // 石墙
             int doorStructureId = 4; // 石门
             int windowStructureId = 6; // 石窗
-            var wallDef = TempConfigProvider.GetStructureDef(wallStructureId);
+            var wallDef = ConfigManager.GetStructureDef(wallStructureId);
 
             for (int y = startY; y < startY + h; y++)
             {
@@ -353,7 +354,7 @@ namespace Core.Game.Map.System
             var doorCell = mapData.GetCell(centerX, startY, 1);
             if (doorCell != null)
             {
-                var doorDef = TempConfigProvider.GetStructureDef(doorStructureId);
+                var doorDef = ConfigManager.GetStructureDef(doorStructureId);
                 doorCell.StructureDefId = doorStructureId;
                 doorCell.StructureHealth = doorDef.MaxHealth;
                 doorCell.DoorState = EDoorState.Closed;
@@ -365,7 +366,7 @@ namespace Core.Game.Map.System
             var winCell = mapData.GetCell(centerX, startY + h - 1, 1);
             if (winCell != null)
             {
-                var winDef = TempConfigProvider.GetStructureDef(windowStructureId);
+                var winDef = ConfigManager.GetStructureDef(windowStructureId);
                 winCell.StructureDefId = windowStructureId;
                 winCell.StructureHealth = winDef.MaxHealth;
                 winCell.DoorState = EDoorState.None;

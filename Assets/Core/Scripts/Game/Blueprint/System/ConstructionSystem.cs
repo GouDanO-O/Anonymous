@@ -2,6 +2,7 @@ using Core.Game.Blueprint.Data;
 using Core.Game.Blueprint.Define;
 using Core.Game.Blueprint.Event;
 using Core.Game.Blueprint.Model;
+using Core.Game.Config;
 using Core.Game.Item.System;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
@@ -49,7 +50,7 @@ namespace Core.Game.Blueprint.System
                 case EBlueprintType.BuildStructure:
                     _mapSystem.SetStructure(bp.X, bp.Y, bp.Floor, bp.DefId);
                     // 如果结构阻挡移动, 驱逐该格上的Pawn
-                    var builtDef = TempConfigProvider.GetStructureDef(bp.DefId);
+                    var builtDef = ConfigManager.GetStructureDef(bp.DefId);
                     if (builtDef.BlocksMovement)
                     {
                         DisplacePawnsFromCell(bp.X, bp.Y, bp.Floor);
@@ -64,16 +65,16 @@ namespace Core.Game.Blueprint.System
                     if (bp.SourceItemId != 0)
                     {
                         // 拆除家具 → 返还材料
-                        var itemDef = TempConfigProvider.GetItemDef(bp.DefId);
+                        var itemDef = ConfigManager.GetItemDef(bp.DefId);
                         _itemSystem.RemoveItem(bp.SourceItemId);
-                        SpawnMaterials(itemDef.DemolishReturns, bp.X, bp.Y, bp.Floor);
+                        SpawnMaterials(ConfigManager.ToMaterialCosts(itemDef.DemolishReturns), bp.X, bp.Y, bp.Floor);
                     }
                     else
                     {
                         // 拆除结构 → 返还材料
-                        var structureDef = TempConfigProvider.GetStructureDef(bp.DefId);
+                        var structureDef = ConfigManager.GetStructureDef(bp.DefId);
                         _mapSystem.RemoveStructure(bp.X, bp.Y, bp.Floor);
-                        SpawnMaterials(structureDef.DemolishReturns, bp.X, bp.Y, bp.Floor);
+                        SpawnMaterials(ConfigManager.ToMaterialCosts(structureDef.DemolishReturns), bp.X, bp.Y, bp.Floor);
                     }
                     break;
 
@@ -93,9 +94,9 @@ namespace Core.Game.Blueprint.System
 
                 case EBlueprintType.DemolishFloor:
                 {
-                    var floorDef = TempConfigProvider.GetFloorDef(bp.DefId);
+                    var floorDef = ConfigManager.GetFloorDef(bp.DefId);
                     _mapSystem.RemoveCellFloor(bp.X, bp.Y, bp.Floor);
-                    SpawnMaterials(floorDef.DemolishReturns, bp.X, bp.Y, bp.Floor);
+                    SpawnMaterials(ConfigManager.ToMaterialCosts(floorDef.DemolishReturns), bp.X, bp.Y, bp.Floor);
                     break;
                 }
 
@@ -105,7 +106,7 @@ namespace Core.Game.Blueprint.System
 
                 case EBlueprintType.DemolishRoof:
                     _mapSystem.SetRoof(bp.X, bp.Y, bp.Floor, false);
-                    SpawnMaterials(TempConfigProvider.RoofDemolishReturns, bp.X, bp.Y, bp.Floor);
+                    SpawnMaterials(ConfigManager.ToMaterialCosts(ConfigManager.Tables.TbBuildCostConfig.RoofDemolishReturns), bp.X, bp.Y, bp.Floor);
                     break;
 
                 case EBlueprintType.BuildFoundation:

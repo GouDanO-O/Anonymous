@@ -1,5 +1,6 @@
 using Core.Game.Blueprint.Model;
 using Core.Game.Blueprint.System;
+using Core.Game.Config;
 using Core.Game.Item.Model;
 using Core.Game.Item.System;
 using Core.Game.Map.Model;
@@ -48,6 +49,9 @@ namespace Core.Game
         protected override void Register_Model()
         {
             base.Register_Model();
+
+            // 配置表加载 (必须在所有System初始化前)
+            ConfigManager.Load();
             this.RegisterModel(new LaunchResourcesDataModel());
             this.RegisterModel(new GameSceneResourcesDataModel());
             this.RegisterModel(new MapDataModel());
@@ -56,11 +60,6 @@ namespace Core.Game
             this.RegisterModel(new SelectionDataModel());
             this.RegisterModel(new MaterialDataModel());
             this.RegisterModel(new BlueprintDataModel());
-        }
-
-        protected override void Register_Utility()
-        {
-            base.Register_Utility();
         }
     }
 }

@@ -1,3 +1,4 @@
+using Core.Game.Config;
 using Core.Game.Map.Data;
 using Core.Game.Map.System;
 using Core.Game.Pawn.Data;
@@ -38,7 +39,7 @@ namespace Core.Game.Pawn.System
         /// </summary>
         public long CreatePawn(int defId, int x, int y, int floor, string name)
         {
-            var def = TempConfigProvider.GetPawnDef(defId);
+            var def = ConfigManager.GetPawnDef(defId);
 
             var data = new PawnData
             {

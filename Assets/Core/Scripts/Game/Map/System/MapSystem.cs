@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Game.Config;
 using Core.Game.Map.Data;
 using Core.Game.Map.Define;
 using Core.Game.Map.Event;
@@ -119,14 +120,14 @@ namespace Core.Game.Map.System
             var cell = _mapDataModel.GetCell(x, y, floor);
             if (cell == null) return;
 
-            var def = TempConfigProvider.GetStructureDef(structureDefId);
+            var def = ConfigManager.GetStructureDef(structureDefId);
             if (health < 0) health = def.MaxHealth;
 
             cell.StructureDefId = structureDefId;
             cell.StructureHealth = health;
 
             // 门默认关闭
-            cell.DoorState = def.StructureType == EStructureType.Door
+            cell.DoorState = (EStructureType)def.StructureType == EStructureType.Door
                 ? EDoorState.Closed
                 : EDoorState.None;
 
@@ -191,8 +192,8 @@ namespace Core.Game.Map.System
             var cell = _mapDataModel.GetCell(x, y, floor);
             if (cell == null || !cell.HasStructure) return;
 
-            var def = TempConfigProvider.GetStructureDef(cell.StructureDefId);
-            if (def.StructureType != EStructureType.Door) return;
+            var def = ConfigManager.GetStructureDef(cell.StructureDefId);
+            if ((EStructureType)def.StructureType != EStructureType.Door) return;
 
             cell.DoorState = state;
             _mapDataModel.CurrentMap.MarkCellDirty(x, y, floor);
@@ -241,7 +242,7 @@ namespace Core.Game.Map.System
             var cell = _mapDataModel.GetCell(x, y, floor);
             if (cell == null) return;
 
-            var def = TempConfigProvider.GetTerrainDef(terrainDefId);
+            var def = ConfigManager.GetTerrainDef(terrainDefId);
             cell.TerrainDefId = terrainDefId;
             cell.MoveCost = def.MoveCost;
             cell.SetFlag(ECellFlags.Walkable, def.MoveCost > 0);
@@ -420,8 +421,8 @@ namespace Core.Game.Map.System
                     var cell = map.GetCell(x, y, floor);
                     if (cell == null || !cell.HasStructure) continue;
 
-                    var def = TempConfigProvider.GetStructureDef(cell.StructureDefId);
-                    if (def.StructureType == EStructureType.Stair)
+                    var def = ConfigManager.GetStructureDef(cell.StructureDefId);
+                    if ((EStructureType)def.StructureType == EStructureType.Stair)
                         stairs.Add(new Vector2Int(x, y));
                 }
             }
@@ -436,8 +437,8 @@ namespace Core.Game.Map.System
             var cell = _mapDataModel.GetCell(x, y, floor);
             if (cell == null || !cell.HasStructure) return false;
 
-            var def = TempConfigProvider.GetStructureDef(cell.StructureDefId);
-            return def.StructureType == EStructureType.Stair;
+            var def = ConfigManager.GetStructureDef(cell.StructureDefId);
+            return (EStructureType)def.StructureType == EStructureType.Stair;
         }
 
         /// <summary>

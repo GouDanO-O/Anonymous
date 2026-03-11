@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-set WORKSPACE=.
-set LUBAN_DLL=%WORKSPACE%\Luban\Luban.dll
-set OUTPUT_CODE_DIR=%~dp0..\Assets\Core\Scripts\Game\Config
-set OUTPUT_DATA_DIR=%~dp0..\Assets\StreamingAssets\ConfigData
+set WORKSPACE=%~dp0Cofnigs
+set LUBAN_DLL=%~dp0Luban\Luban.dll
+set OUTPUT_CODE_DIR=%~dp0..\Assets\Core\Scripts\Game\Config\Generated
+set OUTPUT_DATA_DIR=%~dp0..\Assets\Core\Resources\ConfigData
 
 :: 检查Luban.dll是否存在
 if not exist "%LUBAN_DLL%" (

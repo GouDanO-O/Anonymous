@@ -3,7 +3,35 @@
     "allow": [
       "Bash(python3 -c \":*)",
       "Bash(python -c \":*)",
-      "Bash(xargs grep -l \"stair\\\\|Stair\\\\|floor.*transition\\\\|Floor.*Transition\")"
+      "Bash(xargs grep -l \"stair\\\\|Stair\\\\|floor.*transition\\\\|Floor.*Transition\")",
+      "Bash(ls -la /f/UnityProject/Anonymous/*.json /f/UnityProject/Anonymous/*.md)",
+      "Bash(python -c \"import openpyxl; print\\(''openpyxl available:'', openpyxl.__version__\\)\")",
+      "Bash(py --version)",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(npm install xlsx)",
+      "Bash(node create_excel.js)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet Luban/Luban.dll -t all -c cs-simple-json -d json --conf Cofnigs/luban.conf -x outputCodeDir=\"../Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"../Assets/Core/Resources/ConfigData\")",
+      "Bash(dotnet Luban/Luban.dll -t all -c cs-simple-json -d json --conf Cofnigs/luban.conf -x outputCodeDir=\"../Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"../Assets/Core/Resources/ConfigData\" -l ALL)",
+      "Bash(node create_enums.js)",
+      "Bash(dotnet Luban/Luban.dll --help)",
+      "Bash(dotnet Luban/Luban.dll -t all -c cs-simple-json -d json --conf Cofnigs/test_luban.conf -x outputCodeDir=\"../Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"../Assets/Core/Resources/ConfigData\")",
+      "Bash(dotnet Luban/Luban.dll -t all -c cs-simple-json -d json --conf \"F:/UnityProject/Anonymous/LubanTools/Cofnigs/luban.conf\" -x outputCodeDir=\"F:/UnityProject/Anonymous/Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"F:/UnityProject/Anonymous/Assets/Core/Resources/ConfigData\")",
+      "Bash(dotnet Luban/Luban.dll -t all --conf test_minimal.conf)",
+      "Bash(dotnet --list-runtimes)",
+      "Bash(ls \"F:/UnityProject/Anonymous/LubanTools/Luban/Luban.\"*)",
+      "Bash(\"F:/UnityProject/Anonymous/LubanTools/Luban/Luban.exe\" -t all -c cs-simple-json -d json --conf \"F:/UnityProject/Anonymous/LubanTools/Cofnigs/luban.conf\" -x outputCodeDir=\"F:/UnityProject/Anonymous/Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"F:/UnityProject/Anonymous/Assets/Core/Resources/ConfigData\")",
+      "Bash(curl -L -o luban_latest.zip \"https://github.com/focus-creative-games/luban/releases/download/v4.5.0/luban_dotnet8.zip\")",
+      "Bash(curl -sL \"https://api.github.com/repos/focus-creative-games/luban/releases/latest\")",
+      "Bash(node -e \"const d=require\\(''fs''\\).readFileSync\\(''/dev/stdin'',''utf8''\\);const j=JSON.parse\\(d\\);console.log\\(''Tag:'',j.tag_name\\);j.assets.forEach\\(a=>console.log\\(a.name,a.browser_download_url\\)\\)\")",
+      "Bash(curl -sL \"https://api.github.com/repos/focus-creative-games/luban/releases/latest\" -o /tmp/luban_release.json)",
+      "Bash(node -e \"const j=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''/tmp/luban_release.json'',''utf8''\\)\\);console.log\\(''Tag:'',j.tag_name\\);j.assets.forEach\\(a=>console.log\\(a.name,a.browser_download_url\\)\\)\")",
+      "WebFetch(domain:github.com)",
+      "Bash(DOTNET_DebugWriteToStdErr=1 dotnet Luban_backup/Luban.dll -t all --conf Cofnigs/luban.conf --stacktrace)",
+      "Bash(dotnet Luban_backup/Luban.dll -t all -c cs-simple-json -d json --conf Cofnigs/luban.conf -x outputCodeDir=\"../Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"../Assets/Core/Resources/ConfigData\" -v)",
+      "Bash(dotnet Luban_backup/Luban.dll -t all -c cs-simple-json -d json --conf Cofnigs/luban.conf -x outputCodeDir=\"../Assets/Core/Scripts/Game/Config/Generated\" -x outputDataDir=\"../Assets/Core/Resources/ConfigData\" -l nlog.xml)",
+      "Bash(curl -s https://api.github.com/repos/focus-creative-games/luban/releases/tags/v4.5.0)"
     ]
   }
 }

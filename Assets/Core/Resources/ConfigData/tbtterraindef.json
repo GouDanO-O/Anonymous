@@ -1,0 +1,9 @@
+[
+  {"Id":1,"Name":"Grass","TexturePath":"Terrain_1","Color":{"R":107,"G":153,"B":77,"A":255},"MoveCost":1,"Fertility":1.0,"CanBuild":true},
+  {"Id":2,"Name":"Dirt","TexturePath":"Terrain_2","Color":{"R":140,"G":102,"B":64,"A":255},"MoveCost":1,"Fertility":0.5,"CanBuild":true},
+  {"Id":3,"Name":"Sand","TexturePath":"Terrain_3","Color":{"R":217,"G":204,"B":153,"A":255},"MoveCost":1,"Fertility":0.1,"CanBuild":true},
+  {"Id":4,"Name":"Rock","TexturePath":"Terrain_4","Color":{"R":128,"G":128,"B":128,"A":255},"MoveCost":0,"Fertility":0.0,"CanBuild":false},
+  {"Id":5,"Name":"ShallowWater","TexturePath":"Terrain_5","Color":{"R":89,"G":140,"B":191,"A":255},"MoveCost":3,"Fertility":0.0,"CanBuild":false},
+  {"Id":6,"Name":"DeepWater","TexturePath":"Terrain_6","Color":{"R":38,"G":77,"B":140,"A":255},"MoveCost":0,"Fertility":0.0,"CanBuild":false},
+  {"Id":7,"Name":"Foundation","TexturePath":"Terrain_7","Color":{"R":153,"G":140,"B":115,"A":255},"MoveCost":1,"Fertility":0.0,"CanBuild":true}
+]

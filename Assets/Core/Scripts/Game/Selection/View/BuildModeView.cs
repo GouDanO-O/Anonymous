@@ -1,4 +1,5 @@
 using Core.Game.Blueprint.System;
+using Core.Game.Config;
 using Core.Game.Map.Data;
 using Core.Game.Map.System;
 using GDFrameworkCore;
@@ -228,37 +229,37 @@ namespace Core.Game.Selection.View
                     break;
                 case EBuildMode.Wall:
                 {
-                    var def = TempConfigProvider.GetStructureDef(_selectedWallStructureId);
+                    var def = ConfigManager.GetStructureDef(_selectedWallStructureId);
                     _modeLabel.text = $"建墙: {def.Name} (点击格子)";
                     break;
                 }
                 case EBuildMode.Door:
                 {
-                    var def = TempConfigProvider.GetStructureDef(_selectedDoorStructureId);
+                    var def = ConfigManager.GetStructureDef(_selectedDoorStructureId);
                     _modeLabel.text = $"建门: {def.Name} (点击格子)";
                     break;
                 }
                 case EBuildMode.Window:
                 {
-                    var def = TempConfigProvider.GetStructureDef(_selectedWindowStructureId);
+                    var def = ConfigManager.GetStructureDef(_selectedWindowStructureId);
                     _modeLabel.text = $"建窗: {def.Name} (点击格子)";
                     break;
                 }
                 case EBuildMode.Pillar:
                 {
-                    var def = TempConfigProvider.GetStructureDef(_selectedPillarStructureId);
+                    var def = ConfigManager.GetStructureDef(_selectedPillarStructureId);
                     _modeLabel.text = $"建柱: {def.Name} (点击格子)";
                     break;
                 }
                 case EBuildMode.Stair:
                 {
-                    var def = TempConfigProvider.GetStructureDef(_selectedStairStructureId);
+                    var def = ConfigManager.GetStructureDef(_selectedStairStructureId);
                     _modeLabel.text = $"建梯: {def.Name} (点击格子)";
                     break;
                 }
                 case EBuildMode.Floor:
                 {
-                    var def = TempConfigProvider.GetFloorDef(_selectedFloorDefId);
+                    var def = ConfigManager.GetFloorDef(_selectedFloorDefId);
                     _modeLabel.text = $"铺地板: {def.Name} (点击格子)";
                     break;
                 }
@@ -270,7 +271,7 @@ namespace Core.Game.Selection.View
                     break;
                 case EBuildMode.Furniture:
                 {
-                    var def = TempConfigProvider.GetItemDef(_selectedItemDefId);
+                    var def = ConfigManager.GetItemDef(_selectedItemDefId);
                     _modeLabel.text = $"建家具: {def.Name} [Tab切换]";
                     break;
                 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Core.Game.Config;
 using Core.Game.Map.Data;
 using Core.Game.Map.Event;
 using Core.Game.Pawn.Data;
@@ -60,7 +61,7 @@ namespace Core.Game.Pawn.View
         {
             if (_renderers.ContainsKey(evt.PawnId)) return;
 
-            var def = TempConfigProvider.GetPawnDef(evt.Data.PawnDefId);
+            var def = ConfigManager.GetPawnDef(evt.Data.PawnDefId);
 
             var go = new GameObject($"Pawn_{evt.Data.Name}");
             go.transform.SetParent(transform, false);
@@ -69,7 +70,7 @@ namespace Core.Game.Pawn.View
             // 尝试从 Resources 加载自定义 Pawn 贴图, 无则使用程序化圆形
             var customSprite = Resources.Load<Sprite>($"Tiles/Pawn/Pawn_{evt.Data.PawnDefId}");
             sr.sprite = customSprite != null ? customSprite : _circleSprite;
-            sr.color = def.Color;
+            sr.color = ConfigManager.ToUnityColor(def.Color);
             sr.sortingOrder = PawnConst.PawnSortOrderBase;
 
             float scale = def.SpriteSize;

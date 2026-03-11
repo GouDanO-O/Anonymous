@@ -1,0 +1,9 @@
+[
+    {"Id": 1, "Name": "Grass", "TexturePath": "Terrain_1", "Color": "107,153,77,255", "MoveCost": 1, "Fertility": 1.0, "CanBuild": true},
+    {"Id": 2, "Name": "Dirt", "TexturePath": "Terrain_2", "Color": "140,102,64,255", "MoveCost": 1, "Fertility": 0.5, "CanBuild": true},
+    {"Id": 3, "Name": "Sand", "TexturePath": "Terrain_3", "Color": "217,204,153,255", "MoveCost": 1, "Fertility": 0.1, "CanBuild": true},
+    {"Id": 4, "Name": "Rock", "TexturePath": "Terrain_4", "Color": "128,128,128,255", "MoveCost": 0, "Fertility": 0.0, "CanBuild": false},
+    {"Id": 5, "Name": "ShallowWater", "TexturePath": "Terrain_5", "Color": "89,140,191,255", "MoveCost": 3, "Fertility": 0.0, "CanBuild": false},
+    {"Id": 6, "Name": "DeepWater", "TexturePath": "Terrain_6", "Color": "38,77,140,255", "MoveCost": 0, "Fertility": 0.0, "CanBuild": false},
+    {"Id": 7, "Name": "Foundation", "TexturePath": "Terrain_7", "Color": "153,140,115,255", "MoveCost": 1, "Fertility": 0.0, "CanBuild": true}
+]

@@ -1,0 +1,89 @@
+<module name="">
+    <!-- ========== Beans (复合类型) ========== -->
+
+    <bean name="ColorRGBA" sep=",">
+        <var name="R" type="int" comment="Red 0-255"/>
+        <var name="G" type="int" comment="Green 0-255"/>
+        <var name="B" type="int" comment="Blue 0-255"/>
+        <var name="A" type="int" comment="Alpha 0-255"/>
+    </bean>
+
+    <bean name="MaterialCost" sep=",">
+        <var name="Type" type="int" comment="材料类型(EMaterialType)"/>
+        <var name="Amount" type="int" comment="数量"/>
+    </bean>
+
+    <!-- ========== Def Beans (配置定义) ========== -->
+
+    <bean name="TerrainDef">
+        <var name="Id" type="int" comment="唯一ID"/>
+        <var name="Name" type="string" comment="名称"/>
+        <var name="TexturePath" type="string" comment="贴图文件名(不含路径前缀和扩展名)"/>
+        <var name="Color" type="ColorRGBA" comment="染色"/>
+        <var name="MoveCost" type="int" comment="移动消耗(0=不可通行)"/>
+        <var name="Fertility" type="float" comment="肥沃度"/>
+        <var name="CanBuild" type="bool" comment="是否可建造"/>
+    </bean>
+
+    <bean name="FloorDef">
+        <var name="Id" type="int" comment="唯一ID"/>
+        <var name="Name" type="string" comment="名称"/>
+        <var name="TexturePath" type="string" comment="贴图文件名(不含路径前缀和扩展名)"/>
+        <var name="Color" type="ColorRGBA" comment="染色"/>
+        <var name="MoveCost" type="int" comment="移动消耗"/>
+        <var name="Beauty" type="int" comment="美观度"/>
+        <var name="BuildCosts" type="list,MaterialCost" comment="建造成本"/>
+        <var name="DemolishReturns" type="list,MaterialCost" comment="拆除返还"/>
+    </bean>
+
+    <bean name="StructureDef">
+        <var name="Id" type="int" comment="唯一ID"/>
+        <var name="Name" type="string" comment="名称"/>
+        <var name="TexturePath" type="string" comment="贴图文件名(不含路径前缀和扩展名)"/>
+        <var name="StructureType" type="int" comment="类型(0=Wall,1=Door,2=Window,3=Pillar,4=Stair)"/>
+        <var name="Color" type="ColorRGBA" comment="染色"/>
+        <var name="MaxHealth" type="int" comment="最大生命值"/>
+        <var name="IsTransparent" type="bool" comment="是否透明"/>
+        <var name="BlocksMovement" type="bool" comment="是否阻挡移动"/>
+        <var name="BuildCosts" type="list,MaterialCost" comment="建造成本"/>
+        <var name="DemolishReturns" type="list,MaterialCost" comment="拆除返还"/>
+    </bean>
+
+    <bean name="ItemDef">
+        <var name="Id" type="int" comment="唯一ID"/>
+        <var name="Name" type="string" comment="名称"/>
+        <var name="TexturePath" type="string" comment="贴图文件名(不含路径前缀和扩展名)"/>
+        <var name="Color" type="ColorRGBA" comment="染色"/>
+        <var name="Width" type="int" comment="宽度(格)"/>
+        <var name="Height" type="int" comment="高度(格)"/>
+        <var name="BlocksMovement" type="bool" comment="是否阻挡移动"/>
+        <var name="MaxHealth" type="int" comment="最大生命值"/>
+        <var name="BuildCosts" type="list,MaterialCost" comment="建造成本"/>
+        <var name="DemolishReturns" type="list,MaterialCost" comment="拆除返还"/>
+    </bean>
+
+    <bean name="PawnDef">
+        <var name="Id" type="int" comment="唯一ID"/>
+        <var name="Name" type="string" comment="名称"/>
+        <var name="TexturePath" type="string" comment="贴图文件名(不含路径前缀和扩展名)"/>
+        <var name="Color" type="ColorRGBA" comment="染色"/>
+        <var name="MoveSpeed" type="float" comment="移动速度"/>
+        <var name="SpriteSize" type="float" comment="精灵尺寸"/>
+    </bean>
+
+    <bean name="BuildCostConfig">
+        <var name="FoundationBuildCosts" type="list,MaterialCost" comment="地基建造成本"/>
+        <var name="FoundationDemolishReturns" type="list,MaterialCost" comment="地基拆除返还"/>
+        <var name="RoofBuildCosts" type="list,MaterialCost" comment="屋顶建造成本"/>
+        <var name="RoofDemolishReturns" type="list,MaterialCost" comment="屋顶拆除返还"/>
+    </bean>
+
+    <!-- ========== Tables (配置表) ========== -->
+
+    <table name="TbTerrainDef" value="TerrainDef" index="Id" input="TerrainDef.json" mode="map" comment="地形配置表"/>
+    <table name="TbFloorDef" value="FloorDef" index="Id" input="FloorDef.json" mode="map" comment="地板配置表"/>
+    <table name="TbStructureDef" value="StructureDef" index="Id" input="StructureDef.json" mode="map" comment="结构配置表"/>
+    <table name="TbItemDef" value="ItemDef" index="Id" input="ItemDef.json" mode="map" comment="物品配置表"/>
+    <table name="TbPawnDef" value="PawnDef" index="Id" input="PawnDef.json" mode="map" comment="Pawn配置表"/>
+    <table name="TbBuildCostConfig" value="BuildCostConfig" input="BuildCostConfig.json" mode="one" comment="全局建造成本"/>
+</module>

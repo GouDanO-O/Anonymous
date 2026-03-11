@@ -1,3 +1,4 @@
+using Core.Game.Config;
 using Core.Game.Item.Data;
 using Core.Game.Item.Event;
 using Core.Game.Item.Model;
@@ -31,7 +32,7 @@ namespace Core.Game.Item.System
         /// </summary>
         public bool CanPlaceItem(int defId, int x, int y, int floor, int rotation = 0)
         {
-            var def = TempConfigProvider.GetItemDef(defId);
+            var def = ConfigManager.GetItemDef(defId);
             GetRotatedSize(def.Width, def.Height, rotation, out int w, out int h);
 
             for (int dy = 0; dy < h; dy++)
@@ -70,7 +71,7 @@ namespace Core.Game.Item.System
             if (!CanPlaceItem(defId, x, y, floor, rotation))
                 return Define.ItemConst.InvalidItemId;
 
-            var def = TempConfigProvider.GetItemDef(defId);
+            var def = ConfigManager.GetItemDef(defId);
             GetRotatedSize(def.Width, def.Height, rotation, out int w, out int h);
 
             var data = new ItemData
@@ -124,7 +125,7 @@ namespace Core.Game.Item.System
             var item = _itemModel.GetItem(itemId);
             if (item == null) return;
 
-            var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+            var def = ConfigManager.GetItemDef(item.ItemDefId);
 
             for (int dy = 0; dy < item.Height; dy++)
             {
@@ -162,7 +163,7 @@ namespace Core.Game.Item.System
             var item = _itemModel.GetItem(itemId);
             if (item == null || !item.IsInstalled) return;
 
-            var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+            var def = ConfigManager.GetItemDef(item.ItemDefId);
 
             for (int dy = 0; dy < item.Height; dy++)
             {
@@ -197,7 +198,7 @@ namespace Core.Game.Item.System
             var item = _itemModel.GetItem(itemId);
             if (item == null || item.IsInstalled) return false;
 
-            var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+            var def = ConfigManager.GetItemDef(item.ItemDefId);
             GetRotatedSize(def.Width, def.Height, rotation, out int w, out int h);
 
             // 验证新位置

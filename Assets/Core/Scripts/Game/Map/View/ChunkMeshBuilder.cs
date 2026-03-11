@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Core.Game.Blueprint.Data;
 using Core.Game.Blueprint.Define;
 using Core.Game.Blueprint.Model;
+using Core.Game.Config;
 using Core.Game.Item.Define;
 using Core.Game.Item.Model;
 using Core.Game.Map.Data;
@@ -73,17 +74,17 @@ namespace Core.Game.Map.View
             {
                 if (!cell.HasStructure) return;
 
-                var def = TempConfigProvider.GetStructureDef(cell.StructureDefId);
-                Color color = def.Color;
+                var def = ConfigManager.GetStructureDef(cell.StructureDefId);
+                Color color = ConfigManager.ToUnityColor(def.Color);
 
-                if (def.StructureType == EStructureType.Door)
+                if ((EStructureType)def.StructureType == EStructureType.Door)
                 {
                     // 门: 稍小的矩形以示区分
                     float inset = 0.15f;
                     var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
                     AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color, uv);
                 }
-                else if (def.StructureType == EStructureType.Window)
+                else if ((EStructureType)def.StructureType == EStructureType.Window)
                 {
                     // 窗: 略小矩形 + 半透明
                     float inset = 0.1f;
@@ -91,14 +92,14 @@ namespace Core.Game.Map.View
                     var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
                     AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color, uv);
                 }
-                else if (def.StructureType == EStructureType.Pillar)
+                else if ((EStructureType)def.StructureType == EStructureType.Pillar)
                 {
                     // 柱子: 居中小方块
                     float inset = 0.3f;
                     var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
                     AddRect(lx + inset, ly + inset, lx + 1f - inset, ly + 1f - inset, color, uv);
                 }
-                else if (def.StructureType == EStructureType.Stair)
+                else if ((EStructureType)def.StructureType == EStructureType.Stair)
                 {
                     // 楼梯: 整格底色 + 居中箭头色块(模拟向上箭头)
                     var uv = TileAtlasManager.GetStructureUV(cell.StructureDefId, 0);
@@ -192,8 +193,8 @@ namespace Core.Game.Map.View
 
                         drawnItems.Add(objId);
 
-                        var def = TempConfigProvider.GetItemDef(item.ItemDefId);
-                        Color color = def.Color;
+                        var def = ConfigManager.GetItemDef(item.ItemDefId);
+                        Color color = ConfigManager.ToUnityColor(def.Color);
                         if (!def.BlocksMovement)
                             color.a = 0.5f; // 非阻挡物品半透明
 
@@ -285,7 +286,7 @@ namespace Core.Game.Map.View
                     case EBlueprintType.BuildFurniture:
                     case EBlueprintType.Reinstall:
                     {
-                        var def = TempConfigProvider.GetItemDef(bp.DefId);
+                        var def = ConfigManager.GetItemDef(bp.DefId);
                         int w = def.Width, h = def.Height;
                         if (bp.Rotation == 90 || bp.Rotation == 270)
                         {
@@ -352,8 +353,8 @@ namespace Core.Game.Map.View
             var cell = mapData.GetCell(worldX, worldY, floor);
             if (cell == null || !cell.HasStructure) return false;
 
-            var neighborDef = TempConfigProvider.GetStructureDef(cell.StructureDefId);
-            return neighborDef.StructureType == EStructureType.Wall;
+            var neighborDef = ConfigManager.GetStructureDef(cell.StructureDefId);
+            return (EStructureType)neighborDef.StructureType == EStructureType.Wall;
         }
 
         #endregion
@@ -440,12 +441,12 @@ namespace Core.Game.Map.View
 
         private Color GetTerrainColor(int terrainDefId)
         {
-            return TempConfigProvider.GetTerrainDef(terrainDefId).Color;
+            return ConfigManager.ToUnityColor(ConfigManager.GetTerrainDef(terrainDefId).Color);
         }
 
         private Color GetFloorColor(int floorDefId)
         {
-            return TempConfigProvider.GetFloorDef(floorDefId).Color;
+            return ConfigManager.ToUnityColor(ConfigManager.GetFloorDef(floorDefId).Color);
         }
 
         #endregion

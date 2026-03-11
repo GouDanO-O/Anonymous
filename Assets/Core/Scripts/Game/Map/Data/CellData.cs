@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core.Game.Config;
 using Core.Game.Map.Define;
 
 namespace Core.Game.Map.Data
@@ -57,7 +58,7 @@ namespace Core.Game.Map.Data
         /// <summary>
         /// 移动代价, 0 = 不可通行, 1 = 正常
         /// </summary>
-        public byte MoveCost;
+        public int MoveCost;
 
         public bool IsWalkable => (Flags & ECellFlags.Walkable) != 0 && MoveCost > 0;
         public bool IsIndoor => (Flags & ECellFlags.Indoor) != 0;
@@ -75,8 +76,8 @@ namespace Core.Game.Map.Data
             get
             {
                 if (!HasStructure) return true;
-                var def = TempConfigProvider.GetStructureDef(StructureDefId);
-                if (def.StructureType == EStructureType.Door)
+                var def = ConfigManager.GetStructureDef(StructureDefId);
+                if ((EStructureType)def.StructureType == EStructureType.Door)
                     return DoorState != EDoorState.Locked;
                 return !def.BlocksMovement;
             }

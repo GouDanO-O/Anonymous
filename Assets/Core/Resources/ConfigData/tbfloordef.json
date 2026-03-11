@@ -1,0 +1,5 @@
+[
+  {"Id":1,"Name":"WoodFloor","TexturePath":"Floor_1","Color":{"R":166,"G":128,"B":77,"A":255},"MoveCost":1,"Beauty":1,"BuildCosts":[{"Type":1,"Amount":4}],"DemolishReturns":[{"Type":1,"Amount":2}]},
+  {"Id":2,"Name":"StoneFloor","TexturePath":"Floor_2","Color":{"R":179,"G":179,"B":179,"A":255},"MoveCost":1,"Beauty":2,"BuildCosts":[{"Type":2,"Amount":4}],"DemolishReturns":[{"Type":2,"Amount":2}]},
+  {"Id":3,"Name":"TileFloor","TexturePath":"Floor_3","Color":{"R":204,"G":191,"B":166,"A":255},"MoveCost":1,"Beauty":3,"BuildCosts":[{"Type":2,"Amount":3},{"Type":1,"Amount":2}],"DemolishReturns":[{"Type":2,"Amount":2}]}
+]

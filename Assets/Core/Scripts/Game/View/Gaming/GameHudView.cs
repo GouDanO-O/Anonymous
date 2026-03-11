@@ -1,3 +1,4 @@
+using Core.Game.Config;
 using Core.Game.Item.Model;
 using Core.Game.Map.Data;
 using Core.Game.Map.Event;
@@ -111,7 +112,7 @@ namespace Core.Game.View
 
             string terrain = GetTerrainName(cell.TerrainDefId);
             string floorType = cell.FloorDefId > 0
-                ? TempConfigProvider.GetFloorDef(cell.FloorDefId).Name
+                ? ConfigManager.GetFloorDef(cell.FloorDefId).Name
                 : "无";
             string walkable = cell.IsWalkable ? "可通行" : "不可通行";
             string room = cell.RoomId > 0 ? $"房间#{cell.RoomId}" : "户外";
@@ -119,7 +120,7 @@ namespace Core.Game.View
             string structure = "无";
             if (cell.HasStructure)
             {
-                var sDef = TempConfigProvider.GetStructureDef(cell.StructureDefId);
+                var sDef = ConfigManager.GetStructureDef(cell.StructureDefId);
                 structure = $"{sDef.Name} (HP:{cell.StructureHealth}/{sDef.MaxHealth})";
             }
 
@@ -138,7 +139,7 @@ namespace Core.Game.View
                 return;
             }
 
-            var def = TempConfigProvider.GetPawnDef(pawn.PawnDefId);
+            var def = ConfigManager.GetPawnDef(pawn.PawnDefId);
             _infoTitle.text = $"{pawn.Name} ({def.Name})";
             _infoContent.text =
                 $"位置: ({pawn.X}, {pawn.Y}) F{pawn.Floor}\n" +
@@ -157,7 +158,7 @@ namespace Core.Game.View
                 return;
             }
 
-            var def = TempConfigProvider.GetItemDef(item.ItemDefId);
+            var def = ConfigManager.GetItemDef(item.ItemDefId);
             _infoTitle.text = $"{def.Name}";
             string blocking = def.BlocksMovement ? "阻挡通行" : "可穿越";
             _infoContent.text =

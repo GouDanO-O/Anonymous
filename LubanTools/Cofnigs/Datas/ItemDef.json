@@ -1,0 +1,8 @@
+[
+    {"Id": 1, "Name": "Bed", "TexturePath": "Item_1", "Color": "140,89,51,255", "Width": 1, "Height": 2, "BlocksMovement": true, "MaxHealth": 100, "BuildCosts": [{"Type": 1, "Amount": 10}], "DemolishReturns": [{"Type": 1, "Amount": 6}]},
+    {"Id": 2, "Name": "Table", "TexturePath": "Item_2", "Color": "115,77,38,255", "Width": 2, "Height": 2, "BlocksMovement": true, "MaxHealth": 150, "BuildCosts": [{"Type": 1, "Amount": 15}], "DemolishReturns": [{"Type": 1, "Amount": 9}]},
+    {"Id": 3, "Name": "Chair", "TexturePath": "Item_3", "Color": "179,140,89,255", "Width": 1, "Height": 1, "BlocksMovement": false, "MaxHealth": 80, "BuildCosts": [{"Type": 1, "Amount": 5}], "DemolishReturns": [{"Type": 1, "Amount": 3}]},
+    {"Id": 4, "Name": "StorageCrate", "TexturePath": "Item_4", "Color": "140,140,140,255", "Width": 1, "Height": 1, "BlocksMovement": true, "MaxHealth": 200, "BuildCosts": [{"Type": 1, "Amount": 8}], "DemolishReturns": [{"Type": 1, "Amount": 5}]},
+    {"Id": 5, "Name": "Rug", "TexturePath": "Item_5", "Color": "179,64,51,255", "Width": 2, "Height": 2, "BlocksMovement": false, "MaxHealth": 50, "BuildCosts": [{"Type": 1, "Amount": 4}], "DemolishReturns": [{"Type": 1, "Amount": 2}]},
+    {"Id": 6, "Name": "Lamp", "TexturePath": "Item_6", "Color": "230,217,102,255", "Width": 1, "Height": 1, "BlocksMovement": false, "MaxHealth": 60, "BuildCosts": [{"Type": 3, "Amount": 3}], "DemolishReturns": [{"Type": 3, "Amount": 2}]}
+]
